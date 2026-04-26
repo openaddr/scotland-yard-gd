@@ -20,13 +20,17 @@ func _load_stations() -> void:
 		push_error("Failed to parse stations.json: %s" % err)
 		return
 	stations = json.data
+	# SVG display coordinate range: X ~25-625, Y ~-7 to 368
+	# Transform to game world: uniform scale + offset
+	_min_pos = Vector2(9999, 9999)
+	_max_pos = Vector2(-9999, -9999)
 	for sid in stations:
 		var s = stations[sid]
 		var x: float = s["x"]
 		var y: float = s["y"]
-		if x < _min_pos.x or stations.keys().find(sid) == 0:
+		if x < _min_pos.x:
 			_min_pos.x = x
-		if y < _min_pos.y or stations.keys().find(sid) == 0:
+		if y < _min_pos.y:
 			_min_pos.y = y
 		if x > _max_pos.x:
 			_max_pos.x = x
@@ -37,7 +41,7 @@ func _load_stations() -> void:
 	_min_pos.y -= 20
 	_max_pos.x += 20
 	_max_pos.y += 20
-	print("Loaded %d stations" % stations.size())
+	print("Loaded %d stations (SVG display range: X=%.0f-%.0f Y=%.0f-%.0f)" % [stations.size(), _min_pos.x+20, _max_pos.x-20, _min_pos.y+20, _max_pos.y-20])
 
 func _load_connections() -> void:
 	var file := FileAccess.open("res://data/connections.json", FileAccess.READ)
@@ -78,6 +82,7 @@ func calculate_viewport_transform(viewport_size: Vector2, margin: float = 60.0) 
 	var used_h := data_h * _scale
 	_offset.x = margin + (avail_w - used_w) / 2.0 - _min_pos.x * _scale
 	_offset.y = margin + (avail_h - used_h) / 2.0 - _min_pos.y * _scale
+	print("[MapData] vp=", viewport_size, " data_w=", data_w, " data_h=", data_h, " sp=", _scale, " off=", _offset)
 
 func get_station_position(station_id: int) -> Vector2:
 	if not stations.has(str(station_id)):
@@ -85,20 +90,23 @@ func get_station_position(station_id: int) -> Vector2:
 	var s = stations[str(station_id)]
 	return Vector2(s["x"] * _scale + _offset.x, s["y"] * _scale + _offset.y)
 
+func get_viewport_scale() -> float:
+	return _scale
+
+func get_viewport_offset() -> Vector2:
+	return _offset
+
 func get_all_connections_from(station_id: int) -> Array:
 	if adjacency.has(station_id):
 		return adjacency[station_id]
 	return []
 
-func get_station_ids_at_position(screen_pos: Vector2, tolerance: float = 18.0) -> Array:
-	var best_id: int = -1
-	var best_dist: float = tolerance
+func get_station_ids_at_position(screen_pos: Vector2, tolerance: float = 25.0) -> Array:
+	var results: Array = []
 	for sid_str in stations:
 		var pos := get_station_position(int(sid_str))
 		var dist := screen_pos.distance_to(pos)
-		if dist < best_dist:
-			best_dist = dist
-			best_id = int(sid_str)
-	if best_id >= 0:
-		return [best_id]
-	return []
+		if dist < tolerance:
+			results.append({"id": int(sid_str), "dist": dist})
+	results.sort_custom(func(a, b): return a["dist"] < b["dist"])
+	return results

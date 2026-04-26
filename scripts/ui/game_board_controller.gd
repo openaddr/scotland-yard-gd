@@ -20,7 +20,8 @@ var _game_over: Control
 var _go_title: Label
 var _go_reason: Label
 var _ticket_popup: Control
-var _popup_buttons: VBoxContainer
+var _popup_panel: PanelContainer
+var _popup_content: VBoxContainer
 var _confirm_popup: Control
 var _confirm_station: int = -1
 var _confirm_ticket: int = -1
@@ -60,13 +61,6 @@ func _build_ui() -> void:
 	style.content_margin_bottom = 10.0
 	side.add_theme_stylebox_override("panel", style)
 	add_child(side)
-
-	# Map container (left side, fills remaining space)
-	var map_bg := ColorRect.new()
-	map_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	map_bg.color = Color(0.08, 0.08, 0.12, 1.0)
-	map_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(map_bg)
 	_map_container = Control.new()
 	_map_container.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_map_container.anchor_right = 1.0
@@ -239,36 +233,29 @@ func _build_ui() -> void:
 	back_btn.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/main_menu.tscn"))
 	go_box.add_child(back_btn)
 
-	# Ticket select popup
+	# Ticket select popup — uses PanelContainer + VBox for clean layout
 	_ticket_popup = Control.new()
 	_ticket_popup.set_anchors_preset(Control.PRESET_CENTER)
-	_ticket_popup.offset_left = -80
-	_ticket_popup.offset_top = -50
-	_ticket_popup.offset_right = 80
-	_ticket_popup.offset_bottom = 50
 	_ticket_popup.z_index = 50
 	_ticket_popup.visible = false
 	add_child(_ticket_popup)
 
-	var pop_bg := Panel.new()
-	pop_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_ticket_popup.add_child(pop_bg)
+	_popup_panel = PanelContainer.new()
+	_popup_panel.set_anchors_preset(Control.PRESET_CENTER)
+	var pop_style := StyleBoxFlat.new()
+	pop_style.bg_color = Color(0.15, 0.15, 0.22, 0.95)
+	pop_style.border_color = Color(0.4, 0.4, 0.5)
+	pop_style.set_border_width_all(2)
+	pop_style.set_corner_radius_all(8)
+	pop_style.set_content_margin_all(16)
+	_popup_panel.add_theme_stylebox_override("panel", pop_style)
+	_popup_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_ticket_popup.add_child(_popup_panel)
 
-	var pop_title := Label.new()
-	pop_title.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	pop_title.offset_bottom = 25
-	pop_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pop_title.text = "选择车票类型"
-	pop_title.add_theme_font_size_override("font_size", 14)
-	pop_title.add_theme_color_override("font_color", Color.WHITE)
-	_ticket_popup.add_child(pop_title)
-
-	_popup_buttons = VBoxContainer.new()
-	_popup_buttons.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	_popup_buttons.offset_top = -80
-	_popup_buttons.alignment = BoxContainer.ALIGNMENT_CENTER
-	_popup_buttons.add_theme_constant_override("separation", 8)
-	_ticket_popup.add_child(_popup_buttons)
+	_popup_content = VBoxContainer.new()
+	_popup_content.add_theme_constant_override("separation", 12)
+	_popup_content.alignment = BoxContainer.ALIGNMENT_CENTER
+	_popup_panel.add_child(_popup_content)
 
 	# Move confirmation popup
 	_confirm_popup = Control.new()
@@ -332,7 +319,9 @@ func _build_ui() -> void:
 func _setup_map() -> void:
 	var gs = get_node("/root/GameState")
 	var md = get_node("/root/MapData")
+	print("[GameBoard] map_container size=", _map_container.size, " viewport=", get_viewport_rect().size)
 	if _map_container.size.x < 10 or _map_container.size.y < 10:
+		print("[GameBoard] container too small, using viewport fallback")
 		md.calculate_viewport_transform(get_viewport_rect().size * 0.78)
 	else:
 		md.calculate_viewport_transform(_map_container.size)
@@ -450,14 +439,16 @@ func _on_ready_pressed() -> void:
 	var gs = get_node("/root/GameState")
 	_current_player_for_display = gs.current_player_index
 	_update_token_visibility()
+	_map_renderer.set_active_player(gs.current_player_index)
 	_update_ticket_panel()
 	_update_pool_panel()
 	var player = gs.get_current_player()
 	if player and not player.is_stuck:
+		_valid_moves = MoveValidator.get_valid_moves(player, gs.players, get_node("/root/MapData"))
 		var dests: Array = MoveValidator.get_unique_destinations(_valid_moves)
+		print("[highlight] dests=", dests.size())
 		_map_renderer.highlight_stations(dests, Color.GREEN)
-		_hint_label.text = "点击绿色高亮站点进行移动" + "
-" + "多交通类型可选时会弹窗选择车票"
+		_hint_label.text = "点击绿色高亮站点进行移动" + "\n" + "多交通类型可选时会弹窗选择车票"
 	elif player and player.is_stuck:
 		_hint_label.text = "当前玩家被困住了，自动跳过"
 
@@ -514,8 +505,8 @@ func _on_game_over(winner: int, reason: String) -> void:
 		_go_title.add_theme_color_override("font_color", Color("#E8C840"))
 	_go_reason.text = reason
 
-func _on_valid_moves_updated(moves: Array) -> void:
-	_valid_moves = moves
+func _on_valid_moves_updated(_moves: Array) -> void:
+	pass
 
 func _on_double_move_available() -> void:
 	var gs = get_node("/root/GameState")
@@ -590,12 +581,16 @@ func _handle_map_click(screen_pos: Vector2) -> void:
 		return
 	var local_pos: Vector2 = screen_pos - map_rect.position
 	var md = get_node("/root/MapData")
-	var station_ids: Array = md.get_station_ids_at_position(local_pos)
-	if station_ids.is_empty():
+	var candidates: Array = md.get_station_ids_at_position(local_pos)
+	if candidates.is_empty():
 		return
-	var station_id: int = station_ids[0]
 	var dests: Array = MoveValidator.get_unique_destinations(_valid_moves)
-	if not dests.has(station_id):
+	var station_id: int = -1
+	for entry in candidates:
+		if dests.has(entry["id"]):
+			station_id = entry["id"]
+			break
+	if station_id < 0:
 		return
 	var ticket_options: Array = MoveValidator.get_ticket_options_for_destination(station_id, _valid_moves)
 	if ticket_options.size() == 1:
@@ -605,15 +600,41 @@ func _handle_map_click(screen_pos: Vector2) -> void:
 
 func _show_ticket_select(station_id: int, options: Array) -> void:
 	_selected_station = station_id
-	for child in _popup_buttons.get_children():
+	for child in _popup_content.get_children():
 		child.queue_free()
+
+	var pop_title := Label.new()
+	pop_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pop_title.text = "选择车票类型"
+	pop_title.add_theme_font_size_override("font_size", 20)
+	pop_title.add_theme_color_override("font_color", Color.WHITE)
+	_popup_content.add_child(pop_title)
+
 	for tt in options:
 		var btn := Button.new()
-		btn.text = GameConstants.TICKET_NAMES.get(tt, "?")
+		var name: String = GameConstants.TICKET_NAMES.get(tt, "?")
 		var color: Color = GameConstants.TICKET_COLORS.get(tt, Color.GRAY)
-		btn.add_theme_color_override("font_color", color)
+		btn.text = "  " + name
+		btn.custom_minimum_size = Vector2(160, 44)
+		btn.add_theme_font_size_override("font_size", 18)
+		if color.v < 0.3:
+			btn.add_theme_color_override("font_color", Color("#BBBBBB"))
+		else:
+			btn.add_theme_color_override("font_color", color)
 		btn.pressed.connect(_on_ticket_selected.bind(tt))
-		_popup_buttons.add_child(btn)
+		_popup_content.add_child(btn)
+
+	var cancel_btn := Button.new()
+	cancel_btn.text = "取消"
+	cancel_btn.custom_minimum_size = Vector2(140, 44)
+	cancel_btn.add_theme_font_size_override("font_size", 18)
+	cancel_btn.add_theme_color_override("font_color", Color("#888888"))
+	cancel_btn.pressed.connect(func():
+		_ticket_popup.visible = false
+		_selected_station = -1
+	)
+	_popup_content.add_child(cancel_btn)
+
 	_ticket_popup.visible = true
 
 func _on_ticket_selected(ticket_type: int) -> void:
@@ -629,7 +650,13 @@ func _show_move_confirm(target: int, from: int, ticket_type: int) -> void:
 	_confirm_ticket = ticket_type
 	var info = _confirm_popup.get_node("ConfirmInfo")
 	if info:
-		info.text = "站点 %d → 站点 %d | 使用: %s" % [from, target, GameConstants.TICKET_NAMES.get(ticket_type, "?")]
+		var ticket_name: String = GameConstants.TICKET_NAMES.get(ticket_type, "?")
+		var ticket_color: Color = GameConstants.TICKET_COLORS.get(ticket_type, Color.GRAY)
+		info.text = "站点 %d → 站点 %d\n将消耗: %s" % [from, target, ticket_name]
+		if ticket_color.v < 0.3:
+			info.add_theme_color_override("font_color", Color("#BBBBBB"))
+		else:
+			info.add_theme_color_override("font_color", ticket_color)
 	_confirm_popup.visible = true
 
 func _on_move_confirmed() -> void:
@@ -645,6 +672,11 @@ func _on_move_cancelled() -> void:
 	_confirm_ticket = -1
 func _on_viewport_resized() -> void:
 	_map_renderer.refresh()
-	if _valid_moves.size() > 0 and not _waiting_for_ready:
-		var dests: Array = MoveValidator.get_unique_destinations(_valid_moves)
-		_map_renderer.highlight_stations(dests, Color.GREEN)
+	if not _waiting_for_ready:
+		var gs = get_node("/root/GameState")
+		var player = gs.get_current_player()
+		if player and not player.is_stuck:
+			var moves: Array = MoveValidator.get_valid_moves(player, gs.players, get_node("/root/MapData"))
+			var dests: Array = MoveValidator.get_unique_destinations(moves)
+			print("[highlight] dests=", dests.size())
+			_map_renderer.highlight_stations(dests, Color.GREEN)

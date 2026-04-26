@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"/c/Users/yjnk/Downloads/Compressed/Godot_v4.6-stable_win64.exe/Godot_v4.6-stable_win64.exe\" --headless --script-output-stdout)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_evaluate",
+      "Bash(node download.js)",
+      "Bash(node download_images.js)",
+      "Bash(node retry.js)"
+    ]
+  }
+}

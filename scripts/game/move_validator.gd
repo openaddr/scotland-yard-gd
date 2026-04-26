@@ -60,6 +60,6 @@ static func get_unique_destinations(valid_moves: Array) -> Array:
 static func get_ticket_options_for_destination(station_id: int, valid_moves: Array) -> Array:
 	var options: Array = []
 	for m in valid_moves:
-		if m["station_id"] == station_id:
+		if m["station_id"] == station_id and not options.has(m["ticket_type"]):
 			options.append(m["ticket_type"])
 	return options
