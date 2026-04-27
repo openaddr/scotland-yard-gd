@@ -46,7 +46,7 @@ func _ready() -> void:
 		'func _draw():\n' +
 		'\tvar md = get_node("/root/MapData")\n' +
 		'\tvar sp: float = md.get_viewport_scale() if md else 1.0\n' +
-		'\tvar fs: float = clamp(9.0 * sp, 9.0, 18.0)\n' +
+		'\tvar fs: int = int(clamp(9.0 * sp, 9.0, 18.0))\n' +
 		'\tvar outline: float = max(1.0, fs / 8.0)\n' +
 		'\tvar col: Color = Color.WHITE\n' +
 		'\tvar bg: Color = Color(0, 0, 0, 0.7)\n' +
@@ -201,16 +201,16 @@ func create_token(player_index: int, station_id: int, color: Color, label: Strin
 		'\tvar md = get_parent()\n' +
 		'\tvar sp: float = md._sp if md else 1.0\n' +
 		'\tvar r: float = 7.0 * sp\n' +
-		'\tvar tr: float = 9.0 * sp\n' +
+		'\tvar token_r: float = 9.0 * sp\n' +
 		'\tvar gr: float = 11.0 * sp\n' +
-		'\tvar fs: float = 8.0 * sp\n' +
+		'\tvar fs: int = int(8.0 * sp)\n' +
 		'\tvar bw: float = 1.5 * sp\n' +
 		'\tvar pulse: float = (sin(_pulse) + 1.0) / 2.0 if is_active else 0.0\n' +
 		'\tvar extra_r: float = lerp(0.0, 5.0 * sp, pulse)\n' +
 		'\tvar glow_alpha: float = lerp(0.0, 0.35, pulse) if is_active else 0.0\n' +
 		'\tif is_active and extra_r > 0.1:\n' +
 		'\t\tdraw_circle(Vector2.ZERO, gr + extra_r, Color(_color.r, _color.g, _color.b, glow_alpha))\n' +
-		'\tdraw_circle(Vector2.ZERO, tr, Color(0, 0, 0, 0.5))\n' +
+		'\tdraw_circle(Vector2.ZERO, token_r, Color(0, 0, 0, 0.5))\n' +
 		'\tdraw_circle(Vector2.ZERO, r, _color)\n' +
 		'\tdraw_circle(Vector2.ZERO, r, Color.WHITE, false, bw)\n' +
 		'\tvar ts: Vector2 = _font.get_string_size(_label, HORIZONTAL_ALIGNMENT_CENTER, -1, fs)\n' +

@@ -235,13 +235,15 @@ func _build_ui() -> void:
 
 	# Ticket select popup — uses PanelContainer + VBox for clean layout
 	_ticket_popup = Control.new()
-	_ticket_popup.set_anchors_preset(Control.PRESET_CENTER)
+	_ticket_popup.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_ticket_popup.z_index = 50
 	_ticket_popup.visible = false
-	add_child(_ticket_popup)
+	_map_container.add_child(_ticket_popup)
 
 	_popup_panel = PanelContainer.new()
 	_popup_panel.set_anchors_preset(Control.PRESET_CENTER)
+	_popup_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_popup_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
 	var pop_style := StyleBoxFlat.new()
 	pop_style.bg_color = Color(0.15, 0.15, 0.22, 0.95)
 	pop_style.border_color = Color(0.4, 0.4, 0.5)
@@ -259,28 +261,30 @@ func _build_ui() -> void:
 
 	# Move confirmation popup
 	_confirm_popup = Control.new()
-	_confirm_popup.set_anchors_preset(Control.PRESET_CENTER)
-	_confirm_popup.offset_left = -120
-	_confirm_popup.offset_top = -70
-	_confirm_popup.offset_right = 120
-	_confirm_popup.offset_bottom = 70
+	_confirm_popup.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_confirm_popup.z_index = 60
 	_confirm_popup.visible = false
-	add_child(_confirm_popup)
+	_map_container.add_child(_confirm_popup)
 
-	var confirm_bg := Panel.new()
-	confirm_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_confirm_popup.add_child(confirm_bg)
+	var confirm_panel := PanelContainer.new()
+	confirm_panel.set_anchors_preset(Control.PRESET_CENTER)
+	confirm_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	confirm_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	var confirm_style := StyleBoxFlat.new()
+	confirm_style.bg_color = Color(0.15, 0.15, 0.22, 0.95)
+	confirm_style.border_color = Color(0.4, 0.4, 0.5)
+	confirm_style.set_border_width_all(2)
+	confirm_style.set_corner_radius_all(8)
+	confirm_style.set_content_margin_all(20)
+	confirm_panel.add_theme_stylebox_override("panel", confirm_style)
+	confirm_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	confirm_panel.name = "ConfirmVBox"
+	_confirm_popup.add_child(confirm_panel)
 
 	var confirm_vbox := VBoxContainer.new()
-	confirm_vbox.set_anchors_preset(Control.PRESET_CENTER)
-	confirm_vbox.offset_left = -100
-	confirm_vbox.offset_top = -55
-	confirm_vbox.offset_right = 100
-	confirm_vbox.offset_bottom = 55
-	confirm_vbox.add_theme_constant_override("separation", 15)
+	confirm_vbox.add_theme_constant_override("separation", 12)
 	confirm_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	_confirm_popup.add_child(confirm_vbox)
+	confirm_panel.add_child(confirm_vbox)
 
 	var confirm_title := Label.new()
 	confirm_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -612,9 +616,9 @@ func _show_ticket_select(station_id: int, options: Array) -> void:
 
 	for tt in options:
 		var btn := Button.new()
-		var name: String = GameConstants.TICKET_NAMES.get(tt, "?")
+		var tname: String = GameConstants.TICKET_NAMES.get(tt, "?")
 		var color: Color = GameConstants.TICKET_COLORS.get(tt, Color.GRAY)
-		btn.text = "  " + name
+		btn.text = "  " + tname
 		btn.custom_minimum_size = Vector2(160, 44)
 		btn.add_theme_font_size_override("font_size", 18)
 		if color.v < 0.3:
@@ -648,7 +652,7 @@ func _on_ticket_selected(ticket_type: int) -> void:
 func _show_move_confirm(target: int, from: int, ticket_type: int) -> void:
 	_confirm_station = target
 	_confirm_ticket = ticket_type
-	var info = _confirm_popup.get_node("ConfirmInfo")
+	var info = _confirm_popup.find_child("ConfirmInfo", true, false)
 	if info:
 		var ticket_name: String = GameConstants.TICKET_NAMES.get(ticket_type, "?")
 		var ticket_color: Color = GameConstants.TICKET_COLORS.get(ticket_type, Color.GRAY)
@@ -670,13 +674,24 @@ func _on_move_cancelled() -> void:
 	_confirm_popup.visible = false
 	_confirm_station = -1
 	_confirm_ticket = -1
+var _resize_timer: SceneTreeTimer = null
+
 func _on_viewport_resized() -> void:
 	_map_renderer.refresh()
-	if not _waiting_for_ready:
-		var gs = get_node("/root/GameState")
-		var player = gs.get_current_player()
-		if player and not player.is_stuck:
-			var moves: Array = MoveValidator.get_valid_moves(player, gs.players, get_node("/root/MapData"))
-			var dests: Array = MoveValidator.get_unique_destinations(moves)
-			print("[highlight] dests=", dests.size())
-			_map_renderer.highlight_stations(dests, Color.GREEN)
+	if _resize_timer:
+		_resize_timer.timeout.disconnect(_deferred_highlight)
+	_resize_timer = get_tree().create_timer(0.2)
+	_resize_timer.timeout.connect(_deferred_highlight)
+
+func _deferred_highlight() -> void:
+	_resize_timer = null
+	if _waiting_for_ready:
+		return
+	var gs = get_node("/root/GameState")
+	if gs == null or gs.phase != GameConstants.GamePhase.PLAYING:
+		return
+	var player = gs.get_current_player()
+	if player and not player.is_stuck:
+		var moves: Array = MoveValidator.get_valid_moves(player, gs.players, get_node("/root/MapData"))
+		var dests: Array = MoveValidator.get_unique_destinations(moves)
+		_map_renderer.highlight_stations(dests, Color.GREEN)
