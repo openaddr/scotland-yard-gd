@@ -11,13 +11,13 @@ svg = svg.replace('<circle r="6"', '<circle r="5.0"')
 # 2. Red lines: stroke-width 3 -> 4.0 (do FIRST, since "3" also matches green)
 svg = svg.replace(
     'stroke="#d44040" stroke-width="3" stroke-dasharray="6,4"',
-    'stroke="#d44040" stroke-width="4.0" stroke-dasharray="8,8"'
+    'stroke="#d44040" stroke-width="4.0" stroke-dasharray="6,6"'
 )
 
 # 3. Green lines: stroke-width 2.5 -> 3.0, add dasharray
 svg = svg.replace(
     'stroke="#4a9e50" stroke-width="2.5"  stroke-linecap="round"',
-    'stroke="#4a9e50" stroke-width="3.0"  stroke-dasharray="10,8" stroke-linecap="round"'
+    'stroke="#4a9e50" stroke-width="3.0"  stroke-dasharray="0.5,8" stroke-linecap="round"'
 )
 
 

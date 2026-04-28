@@ -2,7 +2,7 @@
   "permissions": {
     "allow": [
       "mcp__playwright__*",
-      "Bash(Godot_console.exe . *)",
+      "Bash(Godot_console.exe . --debug)",
       "mcp__MiniMax__*",
       "mcp__zai-mcp-server__*",
       "mcp__godot__*",
@@ -14,8 +14,6 @@
       "Bash(git checkout *)",
       "Bash(python3 tools/transform_svg.py)",
       "Bash(python *)",
-      "Bash(\"C:/Program Files/Godot/4.6.2/Godot_console.exe\" . --debug)",
-      "Bash(\"/c/App/Godot/Godot_console.exe\" . --debug)",
       "Bash(kill %1)"
     ]
   }
