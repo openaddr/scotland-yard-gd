@@ -1,13 +1,22 @@
 {
   "permissions": {
     "allow": [
-      "Bash(\"/c/Users/yjnk/Downloads/Compressed/Godot_v4.6-stable_win64.exe/Godot_v4.6-stable_win64.exe\" --headless --script-output-stdout)",
-      "mcp__playwright__browser_navigate",
-      "mcp__playwright__browser_snapshot",
-      "mcp__playwright__browser_evaluate",
-      "Bash(node download.js)",
-      "Bash(node download_images.js)",
-      "Bash(node retry.js)"
+      "mcp__playwright__*",
+      "Bash(Godot_console.exe . *)",
+      "mcp__MiniMax__*",
+      "mcp__zai-mcp-server__*",
+      "mcp__godot__*",
+      "Bash(python3 -c ' *)",
+      "Bash(python3)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(python -c ' *)",
+      "Bash(git checkout *)",
+      "Bash(python3 tools/transform_svg.py)",
+      "Bash(python *)",
+      "Bash(\"C:/Program Files/Godot/4.6.2/Godot_console.exe\" . --debug)",
+      "Bash(\"/c/App/Godot/Godot_console.exe\" . --debug)",
+      "Bash(kill %1)"
     ]
   }
 }

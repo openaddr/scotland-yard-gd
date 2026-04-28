@@ -34,35 +34,7 @@ func _ready() -> void:
 	_label_layer = Node2D.new()
 	_label_layer.name = "StationLabelLayer"
 	_label_layer.z_index = 3
-	var label_script := GDScript.new()
-	label_script.source_code = (
-		'extends Node2D\n' +
-		'var _stations: Dictionary = {}\n' +
-		'var _font: Font\n' +
-		'func setup(stations: Dictionary):\n' +
-		'\t_stations = stations\n' +
-		'func _ready():\n' +
-		'\t_font = ThemeDB.fallback_font\n' +
-		'func _draw():\n' +
-		'\tvar md = get_node("/root/MapData")\n' +
-		'\tvar sp: float = md.get_viewport_scale() if md else 1.0\n' +
-		'\tvar fs: int = int(clamp(9.0 * sp, 9.0, 18.0))\n' +
-		'\tvar outline: float = max(1.0, fs / 8.0)\n' +
-		'\tvar col: Color = Color.WHITE\n' +
-		'\tvar bg: Color = Color(0, 0, 0, 0.7)\n' +
-		'\tfor sid_str in _stations:\n' +
-		'\t\tvar pos: Vector2 = md.get_station_position(int(sid_str))\n' +
-		'\t\tvar text: String = sid_str\n' +
-		'\t\tvar ts: Vector2 = _font.get_string_size(text, HORIZONTAL_ALIGNMENT_CENTER, -1, fs)\n' +
-		'\t\tvar cx: float = pos.x - ts.x / 2.0\n' +
-		'\t\tvar cy: float = pos.y - ts.y / 2.0 - 3.0 * sp\n' +
-		'\t\tfor dx in [-1, 0, 1]:\n' +
-		'\t\t\tfor dy in [-1, 0, 1]:\n' +
-		'\t\t\t\tif dx == 0 and dy == 0: continue\n' +
-		'\t\t\t\tdraw_string(_font, Vector2(cx + dx * outline, cy + dy * outline), text, HORIZONTAL_ALIGNMENT_CENTER, -1, fs, bg)\n' +
-		'\t\tdraw_string(_font, Vector2(cx, cy), text, HORIZONTAL_ALIGNMENT_CENTER, -1, fs, col)\n'
-	)
-	label_script.reload()
+	var label_script = load("res://scripts/map/label_layer.gd")
 	_label_layer.set_script(label_script)
 	_label_layer.call("setup", _stations)
 	add_child(_label_layer)
@@ -180,43 +152,8 @@ func create_token(player_index: int, station_id: int, color: Color, label: Strin
 	token.name = "Token%d" % player_index
 	var pos: Vector2 = _md.get_station_position(station_id)
 	token.position = pos
-	token.z_index = 2
-	var dyn_script = GDScript.new()
-	dyn_script.source_code = (
-		'extends Node2D\n' +
-		'var _color: Color\n' +
-		'var _label: String\n' +
-		'var _font: Font\n' +
-		'var is_active: bool = false\n' +
-		'var _pulse: float = 0.0\n' +
-		'func setup(c: Color, l: String):\n' +
-		'\t_color = c\n' +
-		'\t_label = l\n' +
-		'func _ready():\n' +
-		'\t_font = ThemeDB.fallback_font\n' +
-		'func _process(delta):\n' +
-		'\t_pulse += delta * 4.0\n' +
-		'\tqueue_redraw()\n' +
-		'func _draw():\n' +
-		'\tvar md = get_parent()\n' +
-		'\tvar sp: float = md._sp if md else 1.0\n' +
-		'\tvar r: float = 7.0 * sp\n' +
-		'\tvar token_r: float = 9.0 * sp\n' +
-		'\tvar gr: float = 11.0 * sp\n' +
-		'\tvar fs: int = int(8.0 * sp)\n' +
-		'\tvar bw: float = 1.5 * sp\n' +
-		'\tvar pulse: float = (sin(_pulse) + 1.0) / 2.0 if is_active else 0.0\n' +
-		'\tvar extra_r: float = lerp(0.0, 5.0 * sp, pulse)\n' +
-		'\tvar glow_alpha: float = lerp(0.0, 0.35, pulse) if is_active else 0.0\n' +
-		'\tif is_active and extra_r > 0.1:\n' +
-		'\t\tdraw_circle(Vector2.ZERO, gr + extra_r, Color(_color.r, _color.g, _color.b, glow_alpha))\n' +
-		'\tdraw_circle(Vector2.ZERO, token_r, Color(0, 0, 0, 0.5))\n' +
-		'\tdraw_circle(Vector2.ZERO, r, _color)\n' +
-		'\tdraw_circle(Vector2.ZERO, r, Color.WHITE, false, bw)\n' +
-		'\tvar ts: Vector2 = _font.get_string_size(_label, HORIZONTAL_ALIGNMENT_CENTER, -1, fs)\n' +
-		'\tdraw_string(_font, Vector2(-ts.x/2.0, -ts.y/2.0 - 4.0*sp), _label, HORIZONTAL_ALIGNMENT_CENTER, -1, fs, Color.WHITE)\n'
-	)
-	dyn_script.reload()
+	token.z_index = 4
+	var dyn_script = load("res://scripts/map/token_renderer.gd")
 	token.set_script(dyn_script)
 	token.call("setup", color, label)
 	add_child(token)
