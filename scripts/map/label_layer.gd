@@ -36,7 +36,7 @@ func _draw() -> void:
 				var pts: PackedVector2Array = _circle_band_points(pos, r, x_left, x_right)
 				draw_colored_polygon(pts, c)
 			# Restore circle border
-			draw_arc(pos, r, 0, TAU, 24, border_col, max(1.0, 1.2 * sp), false)
+			draw_arc(pos, r, 0, TAU, 24, border_col, max(1.2, 1.0 * sp), false)
 		var text: String = sid_str
 		var ts: Vector2 = _font.get_string_size(text, HORIZONTAL_ALIGNMENT_CENTER, -1, fs)
 		var cx: float = pos.x - ts.x / 2.0
