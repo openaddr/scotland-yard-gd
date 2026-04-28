@@ -15,7 +15,9 @@
       "Bash(python3 tools/transform_svg.py)",
       "Bash(python *)",
       "Bash(kill %1)",
-      "Bash(\"/c/App/Godot/Godot_console.exe\" . --debug)"
+      "Bash(\"/c/App/Godot/Godot_console.exe\" . --debug)",
+      "WebSearch",
+      "Bash(xxd \"autoload/game_state.gd\")"
     ]
   }
 }

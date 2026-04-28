@@ -35,9 +35,11 @@ func start_game(player_count: int) -> void:
 	ticket_pool[GameConstants.TicketType.TAXI] = 0
 	ticket_pool[GameConstants.TicketType.BUS] = 0
 	ticket_pool[GameConstants.TicketType.UNDERGROUND] = 0
+	var mrx_tickets := GameConstants.MRX_STARTING_TICKETS.duplicate()
+	mrx_tickets[GameConstants.TicketType.BLACK] = player_count - 1
 	var mrx := PlayerData.new(0, GameConstants.PlayerRole.MRX,
 		GameConstants.PLAYER_NAMES[0], GameConstants.PLAYER_COLORS[0],
-		GameConstants.MRX_STARTING_TICKETS)
+		mrx_tickets)
 	players.append(mrx)
 	var start_data := _load_start_positions()
 	var mrx_starts: Array = start_data["mrx"]
@@ -65,8 +67,19 @@ func _start_round() -> void:
 	current_round += 1
 	current_player_index = 0
 	is_double_move = false
+	_distribute_ticket_pool()
 	turn_started.emit(0, current_round)
 	_update_valid_moves()
+
+func _distribute_ticket_pool() -> void:
+	var mrx := players[0] as PlayerData
+	if mrx == null:
+		return
+	for ticket_type in ticket_pool:
+		var count: int = ticket_pool[ticket_type]
+		if count > 0:
+			mrx.tickets.add_ticket(ticket_type, count)
+			ticket_pool[ticket_type] = 0
 
 func get_current_player() -> PlayerData:
 	if current_player_index < players.size():
