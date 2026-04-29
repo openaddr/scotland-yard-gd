@@ -74,7 +74,9 @@ func _load_svg_texture(path: String) -> ImageTexture:
 	var svg_data := svg_file.get_buffer(svg_file.get_length())
 	svg_file.close()
 	var img := Image.new()
-	var err := img.load_svg_from_buffer(svg_data, 2.0)
+	var sh = get_node_or_null("/root/ScreenHelper")
+	var svg_scale: float = 3.0 if (sh and sh.is_mobile) else 2.0
+	var err := img.load_svg_from_buffer(svg_data, svg_scale)
 	if err != OK or img.is_empty():
 		push_warning("Failed to create image from SVG: %s (error: %d)" % [path, err])
 		return null

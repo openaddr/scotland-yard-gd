@@ -28,6 +28,9 @@ var _confirm_ticket: int = -1
 var _ticket_panel: VBoxContainer
 var _pool_panel: VBoxContainer
 var _hint_label: Label
+var _panel_width: float = 280.0
+var _side_panel: PanelContainer
+var _input_locked: bool = false
 
 func _ready() -> void:
 	_build_ui()
@@ -48,23 +51,26 @@ func _deferred_setup() -> void:
 	_show_turn_overlay(0)
 
 func _build_ui() -> void:
-	# Side panel (right side, fixed 280px)
-	var side := PanelContainer.new()
-	side.set_anchors_preset(Control.PRESET_FULL_RECT)
-	side.anchor_left = 1.0
-	side.offset_left = -280
+	var sh = get_node_or_null("/root/ScreenHelper")
+	_panel_width = sh.get_side_panel_width() if sh else 280.0
+	# Side panel (right side, responsive width)
+	_side_panel = PanelContainer.new()
+	_side_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_side_panel.anchor_left = 1.0
+	_side_panel.offset_left = -_panel_width
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.12, 0.12, 0.18, 1.0)
-	style.content_margin_left = 10.0
-	style.content_margin_right = 10.0
-	style.content_margin_top = 10.0
-	style.content_margin_bottom = 10.0
-	side.add_theme_stylebox_override("panel", style)
-	add_child(side)
+	var margin: float = sh.content_margin() if sh else 10.0
+	style.content_margin_left = margin
+	style.content_margin_right = margin
+	style.content_margin_top = margin
+	style.content_margin_bottom = margin
+	_side_panel.add_theme_stylebox_override("panel", style)
+	add_child(_side_panel)
 	_map_container = Control.new()
 	_map_container.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_map_container.anchor_right = 1.0
-	_map_container.offset_right = -280
+	_map_container.offset_right = -_panel_width
 	_map_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_map_container.z_index = 1
 	add_child(_map_container)
@@ -76,7 +82,7 @@ func _build_ui() -> void:
 
 	var side_vbox := VBoxContainer.new()
 	side_vbox.add_theme_constant_override("separation", 8)
-	side.add_child(side_vbox)
+	_side_panel.add_child(side_vbox)
 
 	_round_label = Label.new()
 	_round_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -560,12 +566,14 @@ func _on_double_move_second_step() -> void:
 	_map_renderer.clear_highlights()
 
 func _gui_input(event: InputEvent) -> void:
-	if _waiting_for_ready:
+	if _waiting_for_ready or _input_locked:
 		return
 	var gs = get_node("/root/GameState")
 	if gs == null or gs.phase != GameConstants.GamePhase.PLAYING:
 		return
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+	if event is InputEventScreenTouch and event.pressed and event.index == 0:
+		_handle_map_click(event.position)
+	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		_handle_map_click(get_global_mouse_position())
 
 func _handle_map_click(screen_pos: Vector2) -> void:
@@ -578,7 +586,9 @@ func _handle_map_click(screen_pos: Vector2) -> void:
 		return
 	var local_pos: Vector2 = screen_pos - map_rect.position
 	var md = get_node("/root/MapData")
-	var candidates: Array = md.get_station_ids_at_position(local_pos)
+	var sh = get_node_or_null("/root/ScreenHelper")
+	var tolerance: float = sh.tap_tolerance() if sh else 25.0
+	var candidates: Array = md.get_station_ids_at_position(local_pos, tolerance)
 	if candidates.is_empty():
 		return
 	var dests: Array = MoveValidator.get_unique_destinations(_valid_moves)
@@ -628,14 +638,17 @@ func _show_ticket_select(station_id: int, options: Array) -> void:
 	cancel_btn.add_theme_color_override("font_color", Color("#888888"))
 	cancel_btn.pressed.connect(func():
 		_ticket_popup.visible = false
+		_input_locked = false
 		_selected_station = -1
 	)
 	_popup_content.add_child(cancel_btn)
 
+	_input_locked = true
 	_ticket_popup.visible = true
 
 func _on_ticket_selected(ticket_type: int) -> void:
 	_ticket_popup.visible = false
+	_input_locked = false
 	if _selected_station >= 0:
 		var gs = get_node("/root/GameState")
 		var player = gs.get_current_player()
@@ -669,7 +682,19 @@ func _on_move_cancelled() -> void:
 	_confirm_ticket = -1
 var _resize_timer: SceneTreeTimer = null
 
+func _update_layout() -> void:
+	var sh = get_node_or_null("/root/ScreenHelper")
+	if not sh:
+		return
+	var new_width: float = sh.get_side_panel_width()
+	if absf(new_width - _panel_width) < 1.0:
+		return
+	_panel_width = new_width
+	_side_panel.offset_left = -_panel_width
+	_map_container.offset_right = -_panel_width
+
 func _on_viewport_resized() -> void:
+	_update_layout()
 	_map_renderer.refresh()
 	if _resize_timer:
 		_resize_timer.timeout.disconnect(_deferred_highlight)
