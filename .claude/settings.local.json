@@ -17,7 +17,13 @@
       "Bash(kill %1)",
       "Bash(\"/c/App/Godot/Godot_console.exe\" . --debug)",
       "WebSearch",
-      "Bash(xxd \"autoload/game_state.gd\")"
+      "Bash(xxd \"autoload/game_state.gd\")",
+      "Bash(sed -i '25s/p\\\\.name/p.player_name/' tests/test_game.gd)",
+      "Bash(sed -i '37s/get_current_player\\(\\)\\\\.name/get_current_player\\(\\).player_name/' tests/test_game.gd)",
+      "Bash(sed -i '80s/get_current_player\\(\\)\\\\.name/get_current_player\\(\\).player_name/' tests/test_game_scene.gd)",
+      "Bash(sed -i 's/func setup\\(stations: Dictionary\\) -> void:/func setup\\(stations: Dictionary, md: Node\\) -> void:/' scripts/map/label_layer.gd)",
+      "Bash(sed -i 's/_md = get_node_or_null\\(\"\\\\/root\\\\/MapData\"\\)/_md = md/' scripts/map/label_layer.gd)",
+      "Bash(sed -i 's/_label_layer.call\\(\"setup\", _stations\\)/_label_layer.call\\(\"setup\", _stations, _md\\)/' scripts/map/map_renderer.gd)"
     ]
   }
 }

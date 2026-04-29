@@ -77,6 +77,6 @@ func _test_game_board_ready() -> void:
 			if not found:
 				print("    警告: %s 未找到" % check_name)
 
-	_log("当前玩家: %s" % _gs.get_current_player().name)
+	_log("当前玩家: %s" % _gs.get_current_player().player_name)
 	_log("当前回合: %d" % _gs.current_round)
 	_log("有效移动数: %d" % MoveValidator.get_valid_moves(_gs.get_current_player(), _gs.players, _md).size())

@@ -36,38 +36,16 @@ func _ready() -> void:
 	_label_layer.z_index = 3
 	var label_script = load("res://scripts/map/label_layer.gd")
 	_label_layer.set_script(label_script)
-	_label_layer.call("setup", _stations)
+	_label_layer.call("setup", _stations, _md)
 	add_child(_label_layer)
 
 	# Highlight layer: z_index=0, above SVG but below labels
 	_highlight_layer = Node2D.new()
 	_highlight_layer.name = "HighlightLayer"
 	_highlight_layer.z_index = 0
-	var hl_script := GDScript.new()
-	hl_script.source_code = (
-		'extends Node2D\n' +
-		'var _stations: Array = []\n' +
-		'var _pulse_time: float = 0.0\n' +
-		'func _process(delta: float) -> void:\n' +
-		'\tif _stations.size() > 0:\n' +
-		'\t\t_pulse_time += delta * 3.0\n' +
-		'\t\tqueue_redraw()\n' +
-		'func _draw() -> void:\n' +
-		'\tif _stations.is_empty():\n' +
-		'\t\treturn\n' +
-		'\tvar pulse: float = (sin(_pulse_time) + 1.0) / 2.0\n' +
-		'\tvar radius: float = lerp(14.0, 20.0, pulse)\n' +
-		'\tvar alpha: float = lerp(0.5, 1.0, pulse)\n' +
-		'\tvar fill_col: Color = Color(0.2, 0.95, 0.3, alpha * 0.25)\n' +
-		'\tvar border_col: Color = Color(0.2, 0.95, 0.3, alpha)\n' +
-		'\tfor sid in _stations:\n' +
-		'\t\tvar md = get_node("/root/MapData")\n' +
-		'\t\tvar pos: Vector2 = md.get_station_position(sid)\n' +
-		'\t\tdraw_circle(pos, radius, fill_col)\n' +
-		'\t\tdraw_circle(pos, radius, border_col, false, 3.0)\n'
-	)
-	hl_script.reload()
+	var hl_script = load("res://scripts/map/highlight_layer.gd")
 	_highlight_layer.set_script(hl_script)
+	_highlight_layer.call("setup", _md)
 	add_child(_highlight_layer)
 
 	refresh()
@@ -83,6 +61,7 @@ func refresh() -> void:
 		_md.calculate_viewport_transform(vp_size)
 	_update_bg_sprite()
 	_update_token_positions()
+	_sp = _md.get_viewport_scale()
 	queue_redraw()
 	if _label_layer:
 		_label_layer.queue_redraw()
@@ -94,16 +73,12 @@ func _load_svg_texture(path: String) -> ImageTexture:
 		return null
 	var svg_data := svg_file.get_buffer(svg_file.get_length())
 	svg_file.close()
-	print("SVG data size: ", svg_data.size(), " bytes for ", path)
 	var img := Image.new()
 	var err := img.load_svg_from_buffer(svg_data, 2.0)
 	if err != OK or img.is_empty():
 		push_warning("Failed to create image from SVG: %s (error: %d)" % [path, err])
 		return null
-	print("SVG image created: ", img.get_size())
-	var tex := ImageTexture.create_from_image(img)
-	print("SVG texture created for: ", path)
-	return tex
+	return ImageTexture.create_from_image(img)
 
 func _update_bg_sprite() -> void:
 	if not _bg_sprite or not _bg_sprite.texture:
@@ -123,6 +98,9 @@ func _update_token_positions() -> void:
 			var station_id: int = _token_stations[idx]
 			var pos: Vector2 = _md.get_station_position(station_id)
 			_token_nodes[idx].position = pos
+			var token: Node2D = _token_nodes[idx]
+			if "sp" in token:
+				token.sp = _sp
 
 func highlight_stations(station_ids: Array, color: Color = Color.GREEN) -> void:
 	_highlight_stations = station_ids
@@ -141,8 +119,8 @@ func clear_highlights() -> void:
 func set_active_player(player_index: int) -> void:
 	_current_player_idx = player_index
 	for idx in _token_nodes:
-		var token: Node2D = _token_nodes[idx]
-		token.set("is_active", idx == player_index)
+			var token: Node2D = _token_nodes[idx]
+			token.set("is_active", idx == player_index)
 
 func get_station_pos(station_id: int) -> Vector2:
 	return _md.get_station_position(station_id)
@@ -159,6 +137,9 @@ func create_token(player_index: int, station_id: int, color: Color, label: Strin
 	add_child(token)
 	_token_nodes[player_index] = token
 	_token_stations[player_index] = station_id
+	var tok_script = token as Node2D
+	if "sp" in tok_script:
+		tok_script.sp = _sp
 
 func move_token(player_index: int, station_id: int) -> void:
 	if not _token_nodes.has(player_index):

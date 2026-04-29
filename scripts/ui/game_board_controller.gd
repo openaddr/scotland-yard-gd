@@ -323,9 +323,7 @@ func _build_ui() -> void:
 func _setup_map() -> void:
 	var gs = get_node("/root/GameState")
 	var md = get_node("/root/MapData")
-	print("[GameBoard] map_container size=", _map_container.size, " viewport=", get_viewport_rect().size)
 	if _map_container.size.x < 10 or _map_container.size.y < 10:
-		print("[GameBoard] container too small, using viewport fallback")
 		md.calculate_viewport_transform(get_viewport_rect().size * 0.78)
 	else:
 		md.calculate_viewport_transform(_map_container.size)
@@ -343,7 +341,6 @@ func _connect_signals() -> void:
 	gs.mrx_surfaced.connect(_on_mrx_surfaced)
 	gs.mrx_move_logged.connect(_on_mrx_move_logged)
 	gs.game_over.connect(_on_game_over)
-	gs.valid_moves_updated.connect(_on_valid_moves_updated)
 	gs.double_move_available.connect(_on_double_move_available)
 	gs.double_move_second_step.connect(_on_double_move_second_step)
 	_ready_btn.pressed.connect(_on_ready_pressed)
@@ -416,7 +413,7 @@ func _update_token_visibility() -> void:
 		if p.role == GameConstants.PlayerRole.MRX:
 			if _current_player_for_display == 0:
 				_map_renderer.show_token(i)
-			elif gs.is_surface_round(gs.current_round):
+			elif gs.is_surface_round(gs.mrx_move_count):
 				_map_renderer.show_token(i)
 			else:
 				_map_renderer.hide_token(i)
@@ -429,7 +426,7 @@ func _show_turn_overlay(player_index: int, hint: String = "") -> void:
 	var player = gs.players[player_index]
 	_turn_overlay.visible = true
 	_overlay_msg.text = "请将设备交给"
-	_overlay_name.text = player.name
+	_overlay_name.text = player.player_name
 	_overlay_name.add_theme_color_override("font_color", player.color)
 	_overlay_hint.text = hint
 	_map_renderer.clear_highlights()
@@ -450,7 +447,6 @@ func _on_ready_pressed() -> void:
 	if player and not player.is_stuck:
 		_valid_moves = MoveValidator.get_valid_moves(player, gs.players, get_node("/root/MapData"))
 		var dests: Array = MoveValidator.get_unique_destinations(_valid_moves)
-		print("[highlight] dests=", dests.size())
 		_map_renderer.highlight_stations(dests, Color.GREEN)
 		_hint_label.text = "点击绿色高亮站点进行移动" + "\n" + "多交通类型可选时会弹窗选择车票"
 	elif player and player.is_stuck:
@@ -460,7 +456,7 @@ func _on_turn_started(player_index: int, round_number: int) -> void:
 	var gs = get_node("/root/GameState")
 	_round_label.text = "回合: %d / %d" % [round_number, GameConstants.MAX_ROUNDS]
 	var player = gs.players[player_index]
-	_player_label.text = "当前: %s" % player.name
+	_player_label.text = "当前: %s" % player.player_name
 	_player_label.add_theme_color_override("font_color", player.color)
 	var hint: String = ""
 	if player_index == 0 and gs.is_double_move:
@@ -471,12 +467,12 @@ func _on_move_made(player_index: int, _from: int, to: int, _ticket: int) -> void
 	_map_renderer.move_token(player_index, to)
 
 func _on_mrx_surfaced(_station_id: int, _round: int) -> void:
-	pass
+	_update_token_visibility()
 
-func _on_mrx_move_logged(round_number: int, ticket_type: int, station_id: int, station_shown: bool) -> void:
+func _on_mrx_move_logged(move_number: int, ticket_type: int, station_id: int, station_shown: bool) -> void:
 	var row := HBoxContainer.new()
 	var rl := Label.new()
-	rl.text = "R%d:" % round_number
+	rl.text = "#%d:" % move_number
 	rl.custom_minimum_size.x = 40.0
 	rl.add_theme_font_size_override("font_size", 12)
 	var cr := ColorRect.new()
@@ -508,9 +504,6 @@ func _on_game_over(winner: int, reason: String) -> void:
 		_go_title.text = "Mr. X 胜利!"
 		_go_title.add_theme_color_override("font_color", Color("#E8C840"))
 	_go_reason.text = reason
-
-func _on_valid_moves_updated(_moves: Array) -> void:
-	pass
 
 func _on_double_move_available() -> void:
 	var gs = get_node("/root/GameState")

@@ -22,7 +22,7 @@ func _ready() -> void:
 	gs.start_game(3)
 	print("[2] Players: %d" % gs.players.size())
 	for p in gs.players:
-		print("    %s at station %d" % [p.name, p.station_id])
+		print("    %s at station %d" % [p.player_name, p.station_id])
 
 	var mrx = gs.players[0]
 	var moves = MoveValidator.get_valid_moves(mrx, gs.players, md)
@@ -34,7 +34,7 @@ func _ready() -> void:
 		var m = moves[0]
 		var from = mrx.station_id
 		var ok = gs.execute_move(m["station_id"], m["ticket_type"])
-		print("[4] Move %d->%d ok=%s now=%s" % [from, mrx.station_id, str(ok), gs.get_current_player().name])
+		print("[4] Move %d->%d ok=%s now=%s" % [from, mrx.station_id, str(ok), gs.get_current_player().player_name])
 		if not ok:
 			push_error("Execute move failed!")
 	else:

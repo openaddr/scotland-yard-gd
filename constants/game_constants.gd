@@ -3,7 +3,6 @@ class_name GameConstants
 enum TransportType { TAXI, BUS, UNDERGROUND, FERRY }
 enum TicketType { TAXI, BUS, UNDERGROUND, BLACK, DOUBLE }
 enum GamePhase { MENU, PLAYING, GAME_OVER }
-enum TurnPhase { MRX_MOVE, DETECTIVE_MOVE, TURN_TRANSITION }
 enum PlayerRole { MRX, DETECTIVE }
 
 const TICKET_COLORS := {
@@ -69,4 +68,4 @@ const PLAYER_COLORS := [
 	Color("#8BC34A"),
 ]
 
-const PLAYER_NAMES := ["Mr. X", "侦探1", "侦探2", "侦探3", "侦探4"]
+const PLAYER_NAMES := ["Mr. X", "侦探1", "侦探2", "侦探3", "侦探4", "侦探5"]

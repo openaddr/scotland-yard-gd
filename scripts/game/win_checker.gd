@@ -6,13 +6,13 @@ static func check_after_move(mover_index: int, players: Array[PlayerData]) -> Di
 	if mover.role == GameConstants.PlayerRole.DETECTIVE:
 		if mover.station_id == players[0].station_id:
 			return {"game_over": true, "winner": GameConstants.PlayerRole.DETECTIVE,
-					"reason": "%s 在站点 %d 抓住了 Mr. X!" % [mover.name, mover.station_id]}
+					"reason": "%s 在站点 %d 抓住了 Mr. X!" % [mover.player_name, mover.station_id]}
 	else:
 		for i in range(1, players.size()):
 			var det := players[i]
 			if mover.station_id == det.station_id:
 				return {"game_over": true, "winner": GameConstants.PlayerRole.DETECTIVE,
-						"reason": "Mr. X 在站点 %d 撞上了 %s!" % [mover.station_id, det.name]}
+						"reason": "Mr. X 在站点 %d 撞上了 %s!" % [mover.station_id, det.player_name]}
 	return {"game_over": false}
 
 static func check_all_detectives_stuck(players: Array[PlayerData]) -> bool:
@@ -21,8 +21,8 @@ static func check_all_detectives_stuck(players: Array[PlayerData]) -> bool:
 			return false
 	return true
 
-static func check_round_limit(round_num: int) -> Dictionary:
-	if round_num > GameConstants.MAX_ROUNDS:
+static func check_move_limit(move_count: int) -> Dictionary:
+	if move_count >= GameConstants.MAX_ROUNDS:
 		return {"game_over": true, "winner": GameConstants.PlayerRole.MRX,
-				"reason": "第 %d 回合结束，Mr. X 成功逃脱!" % GameConstants.MAX_ROUNDS}
+				"reason": "Mr. X 成功逃脱!"}
 	return {"game_over": false}

@@ -1,16 +1,17 @@
 extends Node2D
 var _stations: Dictionary = {}
 var _font: Font
+var _md: Node
 
-func setup(stations: Dictionary) -> void:
+func setup(stations: Dictionary, md: Node) -> void:
 	_stations = stations
+	_md = md
 
 func _ready() -> void:
 	_font = ThemeDB.fallback_font
 
 func _draw() -> void:
-	var md = get_node("/root/MapData")
-	var sp: float = md.get_viewport_scale() if md else 1.0
+	var sp: float = _md.get_viewport_scale() if _md else 1.0
 	var fs: int = int(clamp(9.0 * sp, 9.0, 18.0))
 	var outline: float = max(1.0, fs / 8.0)
 	var col: Color = Color.WHITE
@@ -23,10 +24,10 @@ func _draw() -> void:
 	}
 	var border_col = Color(0.2, 0.2, 0.2, 1.0)
 	for sid_str in _stations:
-		var pos: Vector2 = md.get_station_position(int(sid_str))
+		var pos: Vector2 = _md.get_station_position(int(sid_str))
 		var r: float = 5.0 * sp
 		# Draw vertical color bands inside station circle
-		var types_raw: Array = md.stations[sid_str].get("types", [])
+		var types_raw: Array = _md.stations[sid_str].get("types", [])
 		if types_raw.size() > 0:
 			var band_w: float = (2.0 * r) / float(types_raw.size())
 			for i in range(types_raw.size()):

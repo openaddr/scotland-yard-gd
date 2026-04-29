@@ -41,7 +41,6 @@ func _load_stations() -> void:
 	_min_pos.y -= 20
 	_max_pos.x += 20
 	_max_pos.y += 20
-	print("Loaded %d stations (SVG display range: X=%.0f-%.0f Y=%.0f-%.0f)" % [stations.size(), _min_pos.x+20, _max_pos.x-20, _min_pos.y+20, _max_pos.y-20])
 
 func _load_connections() -> void:
 	var file := FileAccess.open("res://data/connections.json", FileAccess.READ)
@@ -68,7 +67,6 @@ func _load_connections() -> void:
 			adjacency[to_id] = []
 		adjacency[from_id].append({"to": to_id, "type": ttype})
 		adjacency[to_id].append({"to": from_id, "type": ttype})
-	print("Loaded %d connections (%d adjacency entries)" % [_connections_raw.size(), adjacency.size()])
 
 func calculate_viewport_transform(viewport_size: Vector2, margin: float = 60.0) -> void:
 	var data_w := _max_pos.x - _min_pos.x
@@ -82,7 +80,6 @@ func calculate_viewport_transform(viewport_size: Vector2, margin: float = 60.0) 
 	var used_h := data_h * _scale
 	_offset.x = margin + (avail_w - used_w) / 2.0 - _min_pos.x * _scale
 	_offset.y = margin + (avail_h - used_h) / 2.0 - _min_pos.y * _scale
-	print("[MapData] vp=", viewport_size, " data_w=", data_w, " data_h=", data_h, " sp=", _scale, " off=", _offset)
 
 func get_station_position(station_id: int) -> Vector2:
 	if not stations.has(str(station_id)):
