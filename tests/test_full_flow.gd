@@ -98,7 +98,7 @@ func _test_start_game() -> void:
 
 	var mrx = _gs.players[0]
 	_assert(mrx.tickets.counts.get(GameConstants.TicketType.TAXI, 0) == 4, "Mr. X has 4 taxi tickets")
-	_assert(mrx.tickets.counts.get(GameConstants.TicketType.BLACK, 0) == 5, "Mr. X has 5 black tickets")
+	_assert(mrx.tickets.counts.get(GameConstants.TicketType.BLACK, 0) == 2, "Mr. X has 2 black tickets (3 players - 1)")
 
 	var det = _gs.players[1]
 	_assert(det.tickets.counts.get(GameConstants.TicketType.TAXI, 0) == 10, "Detective 1 has 10 taxi tickets")
@@ -118,7 +118,7 @@ func _test_mrx_moves() -> void:
 		var ok = _gs.execute_move(target, ticket)
 		_assert(ok, "Mr. X move %d->%d succeeded" % [from, target])
 		_assert(mrx.station_id == target, "Mr. X is now at station %d" % target)
-		_assert(_gs.mrx_log.size() == 1, "Mr. X log has 1 entry")
+		_assert(_gs.mrx_move_count == 1, "Mr. X move count is 1 after first move")
 
 		# After Mr. X move, either: double_move_available fires (stays at index 0)
 		# or turn advances to detective (index 1)
@@ -157,12 +157,12 @@ func _test_detective_moves() -> void:
 
 func _test_win_conditions() -> void:
 	print("\n[Group] Win Conditions")
-	var result = WinChecker.check_round_limit(25)
-	_assert(result["game_over"] == true, "Round limit triggers game over at round 25")
-	_assert(result["winner"] == GameConstants.PlayerRole.MRX, "Round limit winner is Mr. X")
+	var result = WinChecker.check_move_limit(24)
+	_assert(result["game_over"] == true, "Move limit triggers game over at move 24")
+	_assert(result["winner"] == GameConstants.PlayerRole.MRX, "Move limit winner is Mr. X")
 
-	result = WinChecker.check_round_limit(20)
-	_assert(result["game_over"] == false, "No game over at round 20")
+	result = WinChecker.check_move_limit(20)
+	_assert(result["game_over"] == false, "No game over at move 20")
 
 	var all_stuck = WinChecker.check_all_detectives_stuck(_gs.players)
 	_assert(typeof(all_stuck) == TYPE_BOOL, "check_all_detectives_stuck returns bool")

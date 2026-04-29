@@ -3,8 +3,8 @@ extends Node
 signal game_phase_changed(new_phase: int)
 signal turn_started(player_index: int, round_number: int)
 signal move_made(player_index: int, from_station: int, to_station: int, ticket_used: int)
-signal mrx_surfaced(station_id: int, round_number: int)
-signal mrx_move_logged(round_number: int, ticket_type: int, station_id: int, station_shown: bool)
+signal mrx_surfaced(station_id: int, move_number: int)
+signal mrx_move_logged(move_number: int, ticket_type: int, station_id: int, station_shown: bool)
 signal game_over(winner: int, reason: String)
 signal valid_moves_updated(moves: Array)
 signal double_move_available()
@@ -12,6 +12,7 @@ signal double_move_second_step()
 
 var phase: int = GameConstants.GamePhase.MENU
 var current_round: int = 0
+var mrx_move_count: int = 0
 var current_player_index: int = 0
 var players: Array[PlayerData] = []
 var mrx_log: Array[MoveRecord] = []
@@ -30,6 +31,7 @@ func start_game(player_count: int) -> void:
 	players.clear()
 	mrx_log.clear()
 	current_round = 0
+	mrx_move_count = 0
 	current_player_index = 0
 	is_double_move = false
 	ticket_pool[GameConstants.TicketType.TAXI] = 0
@@ -127,32 +129,24 @@ func execute_move(target_station: int, ticket_type: int) -> bool:
 	return true
 
 func _process_mrx_move(ticket_type: int, target_station: int) -> void:
-	var is_surface := GameConstants.SURFACE_ROUNDS.has(current_round)
+	mrx_move_count += 1
+	var is_surface := GameConstants.SURFACE_ROUNDS.has(mrx_move_count)
 	var player := players[0]
+	mrx_log.append(MoveRecord.new(mrx_move_count, ticket_type, target_station, is_surface))
+	mrx_move_logged.emit(mrx_move_count, ticket_type, target_station, is_surface)
+	if is_surface:
+		mrx_surfaced.emit(target_station, mrx_move_count)
+	var result := WinChecker.check_after_move(player.player_index, players)
+	if result["game_over"]:
+		_end_game(result["winner"], result["reason"])
+		return
 	if is_double_move:
 		is_double_move = false
-		mrx_log.append(MoveRecord.new(current_round, ticket_type, target_station, is_surface))
-		if is_surface:
-			mrx_surfaced.emit(target_station, current_round)
-		mrx_move_logged.emit(current_round, ticket_type, target_station, is_surface)
-		var result := WinChecker.check_after_move(player.player_index, players)
-		if result["game_over"]:
-			_end_game(result["winner"], result["reason"])
-			return
 		_advance_turn()
+	elif player.tickets.can_use(GameConstants.TicketType.DOUBLE) and MoveValidator.can_player_move(player, players, _map_data):
+		double_move_available.emit()
 	else:
-		mrx_log.append(MoveRecord.new(current_round, ticket_type, target_station, is_surface))
-		if is_surface:
-			mrx_surfaced.emit(target_station, current_round)
-		mrx_move_logged.emit(current_round, ticket_type, target_station, is_surface)
-		var result := WinChecker.check_after_move(player.player_index, players)
-		if result["game_over"]:
-			_end_game(result["winner"], result["reason"])
-			return
-		if player.tickets.can_use(GameConstants.TicketType.DOUBLE) and MoveValidator.can_player_move(player, players, _map_data):
-			double_move_available.emit()
-		else:
-			_advance_turn()
+		_advance_turn()
 
 func use_double_move() -> void:
 	if not players[0].tickets.can_use(GameConstants.TicketType.DOUBLE):
@@ -171,9 +165,9 @@ func _advance_turn() -> void:
 		return
 	current_player_index += 1
 	if current_player_index >= players.size():
-		var round_result := WinChecker.check_round_limit(current_round)
-		if round_result["game_over"]:
-			_end_game(round_result["winner"], round_result["reason"])
+		var move_result := WinChecker.check_move_limit(mrx_move_count)
+		if move_result["game_over"]:
+			_end_game(move_result["winner"], move_result["reason"])
 			return
 		if WinChecker.check_all_detectives_stuck(players):
 			_end_game(GameConstants.PlayerRole.MRX, "所有侦探都被困住了，Mr. X 胜利!")
@@ -191,8 +185,8 @@ func _end_game(winner: int, reason: String) -> void:
 	phase = GameConstants.GamePhase.GAME_OVER
 	game_over.emit(winner, reason)
 
-func is_surface_round(round_num: int) -> bool:
-	return GameConstants.SURFACE_ROUNDS.has(round_num)
+func is_surface_round(move_num: int) -> bool:
+	return GameConstants.SURFACE_ROUNDS.has(move_num)
 
 func get_last_mrx_surface_station() -> int:
 	for i in range(mrx_log.size() - 1, -1, -1):

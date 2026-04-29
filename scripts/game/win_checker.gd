@@ -21,8 +21,8 @@ static func check_all_detectives_stuck(players: Array[PlayerData]) -> bool:
 			return false
 	return true
 
-static func check_round_limit(round_num: int) -> Dictionary:
-	if round_num > GameConstants.MAX_ROUNDS:
+static func check_move_limit(move_count: int) -> Dictionary:
+	if move_count >= GameConstants.MAX_ROUNDS:
 		return {"game_over": true, "winner": GameConstants.PlayerRole.MRX,
-				"reason": "第 %d 回合结束，Mr. X 成功逃脱!" % GameConstants.MAX_ROUNDS}
+				"reason": "Mr. X 成功逃脱!"}
 	return {"game_over": false}

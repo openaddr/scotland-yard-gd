@@ -416,7 +416,7 @@ func _update_token_visibility() -> void:
 		if p.role == GameConstants.PlayerRole.MRX:
 			if _current_player_for_display == 0:
 				_map_renderer.show_token(i)
-			elif gs.is_surface_round(gs.current_round):
+			elif gs.is_surface_round(gs.mrx_move_count):
 				_map_renderer.show_token(i)
 			else:
 				_map_renderer.hide_token(i)
@@ -473,10 +473,10 @@ func _on_move_made(player_index: int, _from: int, to: int, _ticket: int) -> void
 func _on_mrx_surfaced(_station_id: int, _round: int) -> void:
 	pass
 
-func _on_mrx_move_logged(round_number: int, ticket_type: int, station_id: int, station_shown: bool) -> void:
+func _on_mrx_move_logged(move_number: int, ticket_type: int, station_id: int, station_shown: bool) -> void:
 	var row := HBoxContainer.new()
 	var rl := Label.new()
-	rl.text = "R%d:" % round_number
+	rl.text = "#%d:" % move_number
 	rl.custom_minimum_size.x = 40.0
 	rl.add_theme_font_size_override("font_size", 12)
 	var cr := ColorRect.new()
