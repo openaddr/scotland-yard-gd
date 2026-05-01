@@ -3,20 +3,15 @@ extends Node2D
 var _md: Node
 var _token_nodes: Dictionary = {}
 var _token_stations: Dictionary = {}
-var _station_font: Font
-var _connections: Array = []
 var _stations: Dictionary = {}
 var _bg_sprite: Sprite2D
 var _highlight_layer: Node2D
 var _label_layer: Node2D
 var _sp: float = 1.0
-var _current_player_idx: int = -1
 
 func _ready() -> void:
 	_md = get_node("/root/MapData")
-	_connections = _md._connections_raw
 	_stations = _md.stations
-	_station_font = ThemeDB.fallback_font
 
 	# SVG background: z_index=-1 so it draws below everything
 	_bg_sprite = Sprite2D.new()
@@ -86,7 +81,7 @@ func _update_token_positions() -> void:
 			if "sp" in token:
 				token.sp = _sp
 
-func highlight_stations(station_ids: Array, _color: Color = Color.GREEN) -> void:
+func highlight_stations(station_ids: Array) -> void:
 	if _highlight_layer:
 		_highlight_layer._stations = station_ids.duplicate()
 		_highlight_layer._pulse_time = 0.0
@@ -97,7 +92,6 @@ func clear_highlights() -> void:
 		_highlight_layer._stations = []
 
 func set_active_player(player_index: int) -> void:
-	_current_player_idx = player_index
 	for idx in _token_nodes:
 			var token: Node2D = _token_nodes[idx]
 			token.set("is_active", idx == player_index)

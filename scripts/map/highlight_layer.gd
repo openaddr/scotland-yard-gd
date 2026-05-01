@@ -17,8 +17,10 @@ func _draw() -> void:
 	var pulse: float = (sin(_pulse_time) + 1.0) / 2.0
 	var radius: float = lerp(14.0, 20.0, pulse)
 	var alpha: float = lerp(0.5, 1.0, pulse)
-	var fill_col: Color = Color(0.2, 0.95, 0.3, alpha * 0.25)
-	var border_col: Color = Color(0.2, 0.95, 0.3, alpha)
+	var gs = get_node_or_null("/root/GameSettings")
+	var hl_color: Color = gs.highlight_color if gs else Color(0.2, 0.95, 0.3)
+	var fill_col: Color = Color(hl_color.r, hl_color.g, hl_color.b, alpha * 0.25)
+	var border_col: Color = Color(hl_color.r, hl_color.g, hl_color.b, alpha)
 	for sid in _stations:
 		var pos: Vector2 = _md.get_station_position(sid)
 		draw_circle(pos, radius, fill_col)

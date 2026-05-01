@@ -8,6 +8,8 @@ var _color_prompt_label: Label
 var _color_grid: GridContainer
 var _main_content: Control
 var _color_content: Control
+var _settings_content: Control
+var _hl_color_btns: Array[Button] = []
 
 func _ready() -> void:
 	var bg := ColorRect.new()
@@ -24,8 +26,15 @@ func _ready() -> void:
 	_color_content.visible = false
 	add_child(_color_content)
 
+	_settings_content = Control.new()
+	_settings_content.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_settings_content.visible = false
+	add_child(_settings_content)
+
+
 	_build_main_ui()
 	_build_color_ui()
+	_build_settings_ui()
 
 func _build_main_ui() -> void:
 	var vbox := VBoxContainer.new()
@@ -79,6 +88,13 @@ func _build_main_ui() -> void:
 		_count_buttons[count] = btn
 
 	_select_count(3)
+
+	var settings_btn := Button.new()
+	settings_btn.custom_minimum_size = Vector2(200, 45)
+	settings_btn.text = "设置"
+	settings_btn.add_theme_font_size_override("font_size", 18)
+	settings_btn.pressed.connect(_enter_settings)
+	vbox.add_child(settings_btn)
 
 	var start_btn := Button.new()
 	start_btn.custom_minimum_size = Vector2(200, 60)
@@ -340,3 +356,124 @@ func _show_rules() -> void:
 	var popup = get_child(get_child_count() - 1)
 	if popup is AcceptDialog:
 		popup.popup_centered()
+
+func _build_settings_ui() -> void:
+	var vbox := VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_CENTER)
+	vbox.offset_left = -200
+	vbox.offset_top = -150
+	vbox.offset_right = 200
+	vbox.offset_bottom = 150
+	vbox.add_theme_constant_override("separation", 20)
+	_settings_content.add_child(vbox)
+
+	var title := Label.new()
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.text = "设置"
+	var ls_title := LabelSettings.new()
+	ls_title.font_size = 36
+	ls_title.font_color = Color("#E8C840")
+	title.label_settings = ls_title
+	vbox.add_child(title)
+
+	var hl_label := Label.new()
+	hl_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hl_label.text = "站点高亮颜色"
+	var ls_hl := LabelSettings.new()
+	ls_hl.font_size = 20
+	ls_hl.font_color = Color.WHITE
+	hl_label.label_settings = ls_hl
+	vbox.add_child(hl_label)
+
+	var hl_grid := GridContainer.new()
+	hl_grid.columns = 5
+	hl_grid.add_theme_constant_override("h_separation", 10)
+	hl_grid.add_theme_constant_override("v_separation", 10)
+	vbox.add_child(hl_grid)
+
+	var preset_colors := [
+		{"name": "绿色", "color": Color(0.2, 0.95, 0.3)},
+		{"name": "蓝色", "color": Color(0.3, 0.6, 1.0)},
+		{"name": "红色", "color": Color(1.0, 0.3, 0.2)},
+		{"name": "橙色", "color": Color(1.0, 0.6, 0.0)},
+		{"name": "紫色", "color": Color(0.6, 0.15, 0.95)},
+		{"name": "青色", "color": Color(0.0, 0.75, 0.85)},
+		{"name": "粉色", "color": Color(0.95, 0.2, 0.4)},
+		{"name": "金色", "color": Color(1.0, 0.85, 0.0)},
+		{"name": "白色", "color": Color(0.9, 0.9, 0.9)},
+		{"name": "黄色", "color": Color(0.9, 0.8, 0.15)},
+	]
+
+	var gs = get_node_or_null("/root/GameSettings")
+	var current_color: Color = gs.highlight_color if gs else Color(0.2, 0.95, 0.3)
+
+	for i in range(preset_colors.size()):
+		var entry = preset_colors[i]
+		var btn := Button.new()
+		btn.custom_minimum_size = Vector2(80, 60)
+		var c: Color = entry["color"]
+		btn.text = entry["name"]
+		btn.add_theme_font_size_override("font_size", 14)
+		btn.add_theme_color_override("font_color", (Color("#DDDDDD") if c.get_luminance() < 0.4 else Color("#333333")))
+		var style := StyleBoxFlat.new()
+		style.bg_color = c
+		style.set_corner_radius_all(8)
+		style.set_border_width_all(2)
+		style.border_color = Color.TRANSPARENT
+		for state in ["normal", "hover", "pressed", "focus"]:
+			btn.add_theme_stylebox_override(state, style.duplicate())
+		if current_color.is_equal_approx(c):
+			for state in ["normal", "hover", "pressed", "focus"]:
+				var s: StyleBoxFlat = btn.get_theme_stylebox(state)
+				s.border_color = Color.WHITE
+				btn.add_theme_stylebox_override(state, s)
+		btn.pressed.connect(_on_hl_color_selected.bind(i))
+		hl_grid.add_child(btn)
+		_hl_color_btns.append(btn)
+
+	var back_btn := Button.new()
+	back_btn.custom_minimum_size = Vector2(200, 50)
+	back_btn.text = "保存并返回"
+	back_btn.add_theme_font_size_override("font_size", 20)
+	back_btn.pressed.connect(_exit_settings)
+	vbox.add_child(back_btn)
+
+func _enter_settings() -> void:
+	_main_content.visible = false
+	_settings_content.visible = true
+
+func _exit_settings() -> void:
+	var gs = get_node_or_null("/root/GameSettings")
+	if gs:
+		gs.save_settings()
+	_settings_content.visible = false
+	_main_content.visible = true
+
+func _on_hl_color_selected(index: int) -> void:
+	var preset_colors := [
+		Color(0.2, 0.95, 0.3),
+		Color(0.3, 0.6, 1.0),
+		Color(1.0, 0.3, 0.2),
+		Color(1.0, 0.6, 0.0),
+		Color(0.6, 0.15, 0.95),
+		Color(0.0, 0.75, 0.85),
+		Color(0.95, 0.2, 0.4),
+		Color(1.0, 0.85, 0.0),
+		Color(0.9, 0.9, 0.9),
+		Color(0.9, 0.8, 0.15),
+	]
+	var gs = get_node_or_null("/root/GameSettings")
+	if gs:
+		gs.highlight_color = preset_colors[index]
+	# Update button borders to show selection
+	for i in range(_hl_color_btns.size()):
+		var btn: Button = _hl_color_btns[i]
+		for state in ["normal", "hover", "pressed", "focus"]:
+			var s: StyleBoxFlat = btn.get_theme_stylebox(state).duplicate()
+			s.border_color = Color.TRANSPARENT
+			btn.add_theme_stylebox_override(state, s)
+		var selected_btn: Button = _hl_color_btns[index]
+		for state in ["normal", "hover", "pressed", "focus"]:
+			var s: StyleBoxFlat = selected_btn.get_theme_stylebox(state).duplicate()
+			s.border_color = Color.WHITE
+			selected_btn.add_theme_stylebox_override(state, s)

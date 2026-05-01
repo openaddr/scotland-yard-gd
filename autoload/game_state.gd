@@ -93,9 +93,7 @@ func _start_round() -> void:
 	_update_valid_moves()
 
 func _distribute_ticket_pool() -> void:
-	var mrx := players[0] as PlayerData
-	if mrx == null:
-		return
+	var mrx := players[0]
 	for ticket_type in ticket_pool:
 		var count: int = ticket_pool[ticket_type]
 		if count > 0:

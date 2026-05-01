@@ -10,24 +10,10 @@ var _failed: int = 0
 var _errors: Array = []
 
 func _ready() -> void:
-	# Bootstrap: create singletons - must wait for scene tree to be fully ready
-	await get_tree().process_frame
 	await get_tree().process_frame
 
-	var md := Node.new()
-	md.name = "MapData"
-	md.ccd  --resume "token-color-selection" set_script(load("res://autoload/map_data.gd"))
-	get_tree().root.add_child(md)
-	await get_tree().process_frame
-
-	var gs := Node.new()
-	gs.name = "GameState"
-	gs.set_script(load("res://autoload/game_state.gd"))
-	get_tree().root.add_child(gs)
-	await get_tree().process_frame
-
-	_md = md
-	_gs = gs
+	_md = get_node_or_null("/root/MapData")
+	_gs = get_node_or_null("/root/GameState")
 
 	print("========================================")
 	print("  Scotland Yard - Integration Test Suite")

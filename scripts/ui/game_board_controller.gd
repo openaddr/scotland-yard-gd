@@ -452,7 +452,7 @@ func _on_ready_pressed() -> void:
 	if player and not player.is_stuck:
 		_valid_moves = MoveValidator.get_valid_moves(player, gs.players, get_node("/root/MapData"))
 		var dests: Array = MoveValidator.get_unique_destinations(_valid_moves)
-		_map_renderer.highlight_stations(dests, Color.GREEN)
+		_map_renderer.highlight_stations(dests)
 		_hint_label.text = "点击绿色高亮站点进行移动" + "\n" + "多交通类型可选时会弹窗选择车票"
 	elif player and player.is_stuck:
 		_hint_label.text = "当前玩家被困住了，自动跳过"
@@ -571,7 +571,7 @@ func _gui_input(event: InputEvent) -> void:
 	if gs == null or gs.phase != GameConstants.GamePhase.PLAYING:
 		return
 	if event is InputEventScreenTouch and event.pressed and event.index == 0:
-		_handle_map_click(event.position)
+		_handle_map_click(get_global_mouse_position())
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		_handle_map_click(get_global_mouse_position())
 
@@ -711,4 +711,4 @@ func _deferred_highlight() -> void:
 	if player and not player.is_stuck:
 		var moves: Array = MoveValidator.get_valid_moves(player, gs.players, get_node("/root/MapData"))
 		var dests: Array = MoveValidator.get_unique_destinations(moves)
-		_map_renderer.highlight_stations(dests, Color.GREEN)
+		_map_renderer.highlight_stations(dests)

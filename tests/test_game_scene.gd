@@ -8,24 +8,10 @@ var _errors: Array = []
 var _step: int = 0
 
 func _ready() -> void:
-	# Bootstrap
-	await get_tree().process_frame
 	await get_tree().process_frame
 
-	var md := Node.new()
-	md.name = "MapData"
-	md.set_script(load("res://autoload/map_data.gd"))
-	get_tree().root.add_child(md)
-	await get_tree().process_frame
-
-	var gs := Node.new()
-	gs.name = "GameState"
-	gs.set_script(load("res://autoload/game_state.gd"))
-	get_tree().root.add_child(gs)
-	await get_tree().process_frame
-
-	_md = md
-	_gs = gs
+	_md = get_node_or_null("/root/MapData")
+	_gs = get_node_or_null("/root/GameState")
 
 	print("=== 测试完整游戏流程 ===")
 	await _test_start_and_enter_game()
