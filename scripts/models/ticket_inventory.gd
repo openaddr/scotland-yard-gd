@@ -27,3 +27,13 @@ func use_ticket(ticket_type: int) -> void:
 func add_ticket(ticket_type: int, amount: int = 1) -> void:
 	if counts.has(ticket_type):
 		counts[ticket_type] += amount
+
+func to_dict() -> Dictionary:
+	return {"counts": counts.duplicate()}
+
+static func from_dict(d: Dictionary) -> TicketInventory:
+	var inv := TicketInventory.new()
+	if d.has("counts"):
+		for k in d["counts"]:
+			inv.counts[int(k)] = int(d["counts"][k])
+	return inv

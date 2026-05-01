@@ -31,6 +31,8 @@ var _hint_label: Label
 var _panel_width: float = 280.0
 var _side_panel: PanelContainer
 var _input_locked: bool = false
+var _is_online: bool = false
+var _my_player_index: int = -1
 
 func _ready() -> void:
 	_build_ui()
@@ -43,12 +45,32 @@ func _ready() -> void:
 func _deferred_setup() -> void:
 	await get_tree().process_frame
 	_setup_map()
-	# 手动同步有效移动（信号可能在场景加载前就发了）
-	var gs = get_node("/root/GameState")
-	var player = gs.get_current_player()
-	if player and not player.is_stuck:
-		_valid_moves = MoveValidator.get_valid_moves(player, gs.players, get_node("/root/MapData"))
-	_show_turn_overlay(0)
+	var nm = get_node_or_null("/root/NetworkManager")
+	_is_online = nm and nm.is_connected_to_room()
+	if _is_online:
+		_my_player_index = nm.get_my_player_index()
+		_connect_network_signals()
+		var gs = get_node("/root/GameState")
+		gs.set_network_mode(true)
+		# In online mode, tokens already set up from game_start state
+		_update_token_visibility()
+		_update_ticket_panel()
+		_update_pool_panel()
+		_round_label.text = "回合: %d / %d" % [gs.current_round, GameConstants.MAX_ROUNDS]
+		var player = gs.get_current_player()
+		if player:
+			_player_label.text = "当前: %s" % player.player_name
+			_player_label.add_theme_color_override("font_color", player.color)
+		if _my_player_index == gs.current_player_index:
+			_unlock_my_turn()
+		else:
+			_show_waiting(gs.current_player_index)
+	else:
+		var gs = get_node("/root/GameState")
+		var player = gs.get_current_player()
+		if player and not player.is_stuck:
+			_valid_moves = MoveValidator.get_valid_moves(player, gs.players, get_node("/root/MapData"))
+		_show_turn_overlay(0)
 
 func _build_ui() -> void:
 	var sh = get_node_or_null("/root/ScreenHelper")
@@ -348,7 +370,13 @@ func _connect_signals() -> void:
 	gs.game_over.connect(_on_game_over)
 	gs.double_move_available.connect(_on_double_move_available)
 	gs.double_move_second_step.connect(_on_double_move_second_step)
+	gs.valid_moves_updated.connect(_on_valid_moves_updated)
 	_ready_btn.pressed.connect(_on_ready_pressed)
+
+func _connect_network_signals() -> void:
+	var nm = get_node_or_null("/root/NetworkManager")
+	if nm and not nm.message_received.is_connected(_on_network_message):
+		nm.message_received.connect(_on_network_message)
 
 func _build_ticket_panels() -> void:
 	var gs = get_node("/root/GameState")
@@ -416,7 +444,12 @@ func _update_token_visibility() -> void:
 	for i in range(gs.players.size()):
 		var p = gs.players[i]
 		if p.role == GameConstants.PlayerRole.MRX:
-			if _current_player_for_display == 0:
+			if _is_online and _my_player_index != 0:
+				if gs.is_surface_round(gs.mrx_move_count):
+					_map_renderer.show_token(i)
+				else:
+					_map_renderer.hide_token(i)
+			elif _current_player_for_display == 0:
 				_map_renderer.show_token(i)
 			elif gs.is_surface_round(gs.mrx_move_count):
 				_map_renderer.show_token(i)
@@ -463,10 +496,18 @@ func _on_turn_started(player_index: int, round_number: int) -> void:
 	var player = gs.players[player_index]
 	_player_label.text = "当前: %s" % player.player_name
 	_player_label.add_theme_color_override("font_color", player.color)
-	var hint: String = ""
-	if player_index == 0 and gs.is_double_move:
-		hint = "双倍移动 - 第二步"
-	_show_turn_overlay(player_index, hint)
+	_map_renderer.clear_highlights()
+	_input_locked = false
+	if _is_online:
+		if player_index == _my_player_index:
+			_unlock_my_turn()
+		else:
+			_show_waiting(player_index)
+	else:
+		var hint: String = ""
+		if player_index == 0 and gs.is_double_move:
+			hint = "双倍移动 - 第二步"
+		_show_turn_overlay(player_index, hint)
 
 func _on_move_made(player_index: int, _from: int, to: int, _ticket: int) -> void:
 	_map_renderer.move_token(player_index, to)
@@ -515,12 +556,51 @@ func _on_double_move_available() -> void:
 	if not gs.players[0].tickets.can_use(GameConstants.TicketType.DOUBLE):
 		gs.skip_double_move()
 		return
+	if _is_online and _my_player_index != 0:
+		return
+	if _is_online and _my_player_index == 0:
+		_turn_overlay.visible = true
+		_overlay_msg.text = "是否使用"
+		_overlay_name.text = "双倍移动票?"
+		_overlay_name.add_theme_color_override("font_color", Color("#9C27B0"))
+		_overlay_hint.text = ""
+		_ready_btn.visible = false
+		var btn_box := HBoxContainer.new()
+		btn_box.alignment = BoxContainer.ALIGNMENT_CENTER
+		btn_box.add_theme_constant_override("separation", 20)
+		btn_box.name = "DoubleBtnBox"
+		var ov_box = _turn_overlay.get_child(1)
+		ov_box.add_child(btn_box)
+		var use_btn := Button.new()
+		use_btn.custom_minimum_size = Vector2(140, 50)
+		use_btn.text = "使用"
+		use_btn.add_theme_color_override("font_color", Color("#9C27B0"))
+		use_btn.add_theme_font_size_override("font_size", 20)
+		use_btn.pressed.connect(func():
+			_turn_overlay.visible = false
+			btn_box.queue_free()
+			_ready_btn.visible = true
+			_update_ticket_panel()
+			get_node("/root/NetworkManager").send_message({"type": "use_double"})
+		)
+		btn_box.add_child(use_btn)
+		var skip_btn := Button.new()
+		skip_btn.custom_minimum_size = Vector2(140, 50)
+		skip_btn.text = "不使用"
+		skip_btn.add_theme_font_size_override("font_size", 20)
+		skip_btn.pressed.connect(func():
+			_turn_overlay.visible = false
+			btn_box.queue_free()
+			_ready_btn.visible = true
+			get_node("/root/NetworkManager").send_message({"type": "skip_double"})
+		)
+		btn_box.add_child(skip_btn)
+		return
 	_turn_overlay.visible = true
 	_overlay_msg.text = "Mr. X 是否使用"
 	_overlay_name.text = "双倍移动票?"
 	_overlay_name.add_theme_color_override("font_color", Color("#9C27B0"))
 	_overlay_hint.text = ""
-	# Replace ready button with two option buttons
 	_ready_btn.visible = false
 	var btn_box := HBoxContainer.new()
 	btn_box.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -554,6 +634,10 @@ func _on_double_move_available() -> void:
 	btn_box.add_child(skip_btn)
 
 func _on_double_move_second_step() -> void:
+	if _is_online and _my_player_index == 0:
+		_unlock_my_turn()
+		_hint_label.text = "双倍移动 - 请选择第二个目标站点"
+		return
 	_turn_overlay.visible = true
 	_overlay_msg.text = "Mr. X 双倍移动"
 	_overlay_name.text = "第二步"
@@ -564,11 +648,69 @@ func _on_double_move_second_step() -> void:
 	_waiting_for_ready = true
 	_map_renderer.clear_highlights()
 
+func _on_valid_moves_updated(moves: Array) -> void:
+	if not _is_online:
+		return
+	var gs = get_node("/root/GameState")
+	if gs.current_player_index != _my_player_index:
+		return
+	_valid_moves = moves
+	var dests: Array = MoveValidator.get_unique_destinations(moves)
+	_map_renderer.highlight_stations(dests)
+	_hint_label.text = "点击高亮站点进行移动"
+
+func _show_waiting(player_index: int) -> void:
+	_input_locked = true
+	var gs = get_node("/root/GameState")
+	if player_index < gs.players.size():
+		_hint_label.text = "等待 %s 操作中..." % gs.players[player_index].player_name
+	_map_renderer.clear_highlights()
+
+func _unlock_my_turn() -> void:
+	_input_locked = false
+	_turn_overlay.visible = false
+	var gs = get_node("/root/GameState")
+	_current_player_for_display = _my_player_index
+	_update_token_visibility()
+	_map_renderer.set_active_player(_my_player_index)
+	_update_ticket_panel()
+	_update_pool_panel()
+	var player = gs.get_current_player()
+	if player and not player.is_stuck:
+		_valid_moves = MoveValidator.get_valid_moves(player, gs.players, get_node("/root/MapData"))
+		var dests: Array = MoveValidator.get_unique_destinations(_valid_moves)
+		_map_renderer.highlight_stations(dests)
+		_hint_label.text = "点击高亮站点进行移动"
+	elif player and player.is_stuck:
+		_hint_label.text = "你被困住了"
+
+func _on_network_message(msg: Dictionary) -> void:
+	var t: String = msg.get("type", "")
+	match t:
+		"lobby_state", "welcome":
+			pass
+		"turn_started":
+			pass
+		"move_made":
+			pass
+		"valid_moves":
+			_on_valid_moves_updated(msg.get("moves", []))
+		"mrx_logged":
+			_update_pool_panel()
+		"double_move_available":
+			_on_double_move_available()
+		"double_move_second":
+			_on_double_move_second_step()
+		"game_over":
+			_on_game_over(int(msg.get("winner", 0)), msg.get("reason", ""))
+
 func _gui_input(event: InputEvent) -> void:
 	if _waiting_for_ready or _input_locked:
 		return
 	var gs = get_node("/root/GameState")
 	if gs == null or gs.phase != GameConstants.GamePhase.PLAYING:
+		return
+	if _is_online and gs.current_player_index != _my_player_index:
 		return
 	if event is InputEventScreenTouch and event.pressed and event.index == 0:
 		_handle_map_click(get_global_mouse_position())
@@ -671,7 +813,11 @@ func _show_move_confirm(target: int, from: int, ticket_type: int) -> void:
 func _on_move_confirmed() -> void:
 	_confirm_popup.visible = false
 	if _confirm_station >= 0:
-		get_node("/root/GameState").execute_move(_confirm_station, _confirm_ticket)
+		if _is_online:
+			var nm = get_node("/root/NetworkManager")
+			nm.send_message({"type": "move", "target_station": _confirm_station, "ticket_type": _confirm_ticket})
+		else:
+			get_node("/root/GameState").execute_move(_confirm_station, _confirm_ticket)
 		_confirm_station = -1
 		_confirm_ticket = -1
 

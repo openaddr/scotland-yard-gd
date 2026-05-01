@@ -23,6 +23,7 @@ var ticket_pool: Dictionary = {
 }
 var is_double_move: bool = false
 var _map_data: Node
+var _network_mode: bool = false
 
 func _ready() -> void:
 	_map_data = get_node_or_null("/root/MapData")
@@ -217,3 +218,30 @@ func get_last_mrx_surface_station() -> int:
 		if mrx_log[i].is_surface:
 			return mrx_log[i].station_id
 	return players[0].station_id if players.size() > 0 else -1
+
+func set_network_mode(enabled: bool) -> void:
+	_network_mode = enabled
+
+func get_full_state() -> Dictionary:
+	return {
+		"players": players.map(func(p): return p.to_dict()),
+		"mrx_log": mrx_log.map(func(r): return r.to_dict()),
+		"ticket_pool": ticket_pool.duplicate(),
+		"current_round": current_round,
+		"current_player_index": current_player_index,
+		"mrx_move_count": mrx_move_count,
+		"is_double_move": is_double_move,
+	}
+
+func load_full_state(state: Dictionary) -> void:
+	players.clear()
+	for pd in state["players"]:
+		players.append(PlayerData.from_dict(pd))
+	mrx_log.clear()
+	for rd in state["mrx_log"]:
+		mrx_log.append(MoveRecord.from_dict(rd))
+	ticket_pool = state["ticket_pool"].duplicate()
+	current_round = int(state["current_round"])
+	current_player_index = int(state["current_player_index"])
+	mrx_move_count = int(state["mrx_move_count"])
+	is_double_move = state.get("is_double_move", false)

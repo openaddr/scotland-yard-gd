@@ -110,6 +110,13 @@ func _build_main_ui() -> void:
 	rules_btn.pressed.connect(_show_rules)
 	vbox.add_child(rules_btn)
 
+	var online_btn := Button.new()
+	online_btn.custom_minimum_size = Vector2(200, 45)
+	online_btn.text = "联机游戏"
+	online_btn.add_theme_font_size_override("font_size", 18)
+	online_btn.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/lobby.tscn"))
+	vbox.add_child(online_btn)
+
 	_build_rules_popup()
 
 	var info := Label.new()
