@@ -14,6 +14,9 @@ func _ready() -> void:
 
 func _load_stations() -> void:
 	var file := FileAccess.open("res://data/stations.json", FileAccess.READ)
+	if file == null:
+		push_error("Failed to load stations.json")
+		return
 	var json := JSON.new()
 	var err := json.parse(file.get_as_text())
 	if err != OK:
@@ -44,6 +47,9 @@ func _load_stations() -> void:
 
 func _load_connections() -> void:
 	var file := FileAccess.open("res://data/connections.json", FileAccess.READ)
+	if file == null:
+		push_error("Failed to load connections.json")
+		return
 	var json := JSON.new()
 	var err := json.parse(file.get_as_text())
 	if err != OK:

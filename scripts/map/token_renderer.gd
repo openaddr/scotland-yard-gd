@@ -4,7 +4,7 @@ var is_active: bool = false
 var _pulse: float = 0.0
 var sp: float = 1.0
 
-func setup(c: Color, _l: String) -> void:
+func setup(c: Color) -> void:
 	_color = c
 
 func _process(delta: float) -> void:
@@ -20,7 +20,7 @@ func _draw() -> void:
 	if is_active and extra_r > 0.1:
 		draw_circle(Vector2.ZERO, r + 4.0 * sp + extra_r, Color(_color.r, _color.g, _color.b, glow_alpha))
 	var shadow_lw: float = max(3.5, 4.5 * sp)
-	var d: float = r * 0.7
+	var d: float = r * 0.5
 	draw_line(Vector2(-d, -d), Vector2(d, d), Color(0, 0, 0, 0.6), shadow_lw)
 	draw_line(Vector2(-d, d), Vector2(d, -d), Color(0, 0, 0, 0.6), shadow_lw)
 	var lw: float = max(3.0, 3.5 * sp)

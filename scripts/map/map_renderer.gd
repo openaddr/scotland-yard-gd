@@ -1,9 +1,6 @@
 extends Node2D
 
 var _md: Node
-var _highlight_stations: Array = []
-var _highlight_color: Color = Color.GREEN
-var _pulse_time: float = 0.0
 var _token_nodes: Dictionary = {}
 var _token_stations: Dictionary = {}
 var _station_font: Font
@@ -25,7 +22,7 @@ func _ready() -> void:
 	_bg_sprite = Sprite2D.new()
 	_bg_sprite.name = "BoardBackground"
 	_bg_sprite.z_index = -1
-	var svg_tex := _load_svg_texture("res://assets/Scotland_Yard_schematic.svg")
+	var svg_tex: Texture2D = load("res://assets/Scotland_Yard_schematic.svg")
 	if svg_tex:
 		_bg_sprite.texture = svg_tex
 	add_child(_bg_sprite)
@@ -66,32 +63,17 @@ func refresh() -> void:
 	if _label_layer:
 		_label_layer.queue_redraw()
 
-func _load_svg_texture(path: String) -> ImageTexture:
-	var svg_file := FileAccess.open(path, FileAccess.READ)
-	if not svg_file:
-		push_warning("Could not open SVG: " + path)
-		return null
-	var svg_data := svg_file.get_buffer(svg_file.get_length())
-	svg_file.close()
-	var img := Image.new()
-	var sh = get_node_or_null("/root/ScreenHelper")
-	var svg_scale: float = 3.0 if (sh and sh.is_mobile) else 2.0
-	var err := img.load_svg_from_buffer(svg_data, svg_scale)
-	if err != OK or img.is_empty():
-		push_warning("Failed to create image from SVG: %s (error: %d)" % [path, err])
-		return null
-	return ImageTexture.create_from_image(img)
-
 func _update_bg_sprite() -> void:
 	if not _bg_sprite or not _bg_sprite.texture:
 		return
 	_sp = _md.get_viewport_scale()
 	var off: Vector2 = _md.get_viewport_offset()
-	var s: float = _sp / 2.0
+	var tex: Texture2D = _bg_sprite.texture
+	var s: float = _sp * 600.0 / tex.get_width()
 	_bg_sprite.scale = Vector2(s, s)
 	_bg_sprite.position = Vector2(
-		off.x + 600.0 * s,
-		off.y + 450.0 * s
+		off.x + 300.0 * _sp,
+		off.y + 225.0 * _sp
 	)
 
 func _update_token_positions() -> void:
@@ -104,17 +86,13 @@ func _update_token_positions() -> void:
 			if "sp" in token:
 				token.sp = _sp
 
-func highlight_stations(station_ids: Array, color: Color = Color.GREEN) -> void:
-	_highlight_stations = station_ids
-	_highlight_color = color
-	_pulse_time = 0.0
+func highlight_stations(station_ids: Array, _color: Color = Color.GREEN) -> void:
 	if _highlight_layer:
 		_highlight_layer._stations = station_ids.duplicate()
 		_highlight_layer._pulse_time = 0.0
 		_highlight_layer.queue_redraw()
 
 func clear_highlights() -> void:
-	_highlight_stations = []
 	if _highlight_layer:
 		_highlight_layer._stations = []
 
@@ -127,7 +105,7 @@ func set_active_player(player_index: int) -> void:
 func get_station_pos(station_id: int) -> Vector2:
 	return _md.get_station_position(station_id)
 
-func create_token(player_index: int, station_id: int, color: Color, label: String) -> void:
+func create_token(player_index: int, station_id: int, color: Color) -> void:
 	var token := Node2D.new()
 	token.name = "Token%d" % player_index
 	var pos: Vector2 = _md.get_station_position(station_id)
@@ -135,13 +113,12 @@ func create_token(player_index: int, station_id: int, color: Color, label: Strin
 	token.z_index = 4
 	var dyn_script = load("res://scripts/map/token_renderer.gd")
 	token.set_script(dyn_script)
-	token.call("setup", color, label)
+	token.call("setup", color)
 	add_child(token)
 	_token_nodes[player_index] = token
 	_token_stations[player_index] = station_id
-	var tok_script = token as Node2D
-	if "sp" in tok_script:
-		tok_script.sp = _sp
+	if "sp" in token:
+		token.sp = _sp
 
 func move_token(player_index: int, station_id: int) -> void:
 	if not _token_nodes.has(player_index):

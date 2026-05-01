@@ -336,8 +336,7 @@ func _setup_map() -> void:
 	_map_renderer.refresh()
 	for i in range(gs.players.size()):
 		var p = gs.players[i]
-		var label := "X" if p.role == GameConstants.PlayerRole.MRX else "D%d" % i
-		_map_renderer.create_token(i, p.station_id, p.color, label)
+		_map_renderer.create_token(i, p.station_id, p.color)
 	_update_token_visibility()
 
 func _connect_signals() -> void:

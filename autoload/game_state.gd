@@ -27,7 +27,7 @@ var _map_data: Node
 func _ready() -> void:
 	_map_data = get_node_or_null("/root/MapData")
 
-func start_game(player_count: int) -> void:
+func start_game(player_count: int, color_indices: Array = []) -> void:
 	players.clear()
 	mrx_log.clear()
 	current_round = 0
@@ -39,9 +39,13 @@ func start_game(player_count: int) -> void:
 	ticket_pool[GameConstants.TicketType.UNDERGROUND] = 0
 	var mrx_tickets := GameConstants.MRX_STARTING_TICKETS.duplicate()
 	mrx_tickets[GameConstants.TicketType.BLACK] = player_count - 1
+	var mrx_color: Color
+	if color_indices.size() > 0:
+		mrx_color = GameConstants.COLOR_PALETTE[color_indices[0]]["color"]
+	else:
+		mrx_color = GameConstants.PLAYER_COLORS[0]
 	var mrx := PlayerData.new(0, GameConstants.PlayerRole.MRX,
-		GameConstants.PLAYER_NAMES[0], GameConstants.PLAYER_COLORS[0],
-		mrx_tickets)
+		"Mr. X", mrx_color, mrx_tickets)
 	players.append(mrx)
 	var start_data := _load_start_positions()
 	var mrx_starts: Array = start_data["mrx"]
@@ -50,8 +54,17 @@ func start_game(player_count: int) -> void:
 	mrx.station_id = mrx_starts[0]
 	det_starts.shuffle()
 	for i in range(1, player_count):
+		var det_color: Color
+		var det_name: String
+		if color_indices.size() > i:
+			var entry = GameConstants.COLOR_PALETTE[color_indices[i]]
+			det_color = entry["color"]
+			det_name = entry["name"]
+		else:
+			det_color = GameConstants.PLAYER_COLORS[i] if i < GameConstants.PLAYER_COLORS.size() else Color.WHITE
+			det_name = GameConstants.PLAYER_NAMES[i] if i < GameConstants.PLAYER_NAMES.size() else "侦探%d" % i
 		var det := PlayerData.new(i, GameConstants.PlayerRole.DETECTIVE,
-			GameConstants.PLAYER_NAMES[i], GameConstants.PLAYER_COLORS[i],
+			det_name, det_color,
 			GameConstants.DETECTIVE_STARTING_TICKETS)
 		det.station_id = det_starts[i - 1]
 		players.append(det)
@@ -65,7 +78,10 @@ func _load_start_positions() -> Dictionary:
 		push_error("Failed to load starting_positions.json")
 		return {"mrx": [], "detectives": []}
 	var json := JSON.new()
-	json.parse(file.get_as_text())
+	var err := json.parse(file.get_as_text())
+	if err != OK:
+		push_error("Failed to parse starting_positions.json: %s" % err)
+		return {"mrx": [], "detectives": []}
 	return json.data
 
 func _start_round() -> void:
@@ -167,34 +183,30 @@ func _advance_turn() -> void:
 	if is_double_move:
 		return
 	current_player_index += 1
-	if current_player_index >= players.size():
-		var move_result := WinChecker.check_move_limit(mrx_move_count)
-		if move_result["game_over"]:
-			_end_game(move_result["winner"], move_result["reason"])
-			return
-		if WinChecker.check_all_detectives_stuck(players):
-			_end_game(GameConstants.PlayerRole.MRX, "所有侦探都被困住了，Mr. X 胜利!")
-			return
-		_start_round()
-	else:
-		while current_player_index < players.size():
-			var next_player := get_current_player()
-			if next_player != null and not next_player.is_stuck:
-				break
-			current_player_index += 1
-		if current_player_index >= players.size():
-			var move_result := WinChecker.check_move_limit(mrx_move_count)
-			if move_result["game_over"]:
-				_end_game(move_result["winner"], move_result["reason"])
-				return
-			if WinChecker.check_all_detectives_stuck(players):
-				_end_game(GameConstants.PlayerRole.MRX, "所有侦探都被困住了，Mr. X 胜利!")
-				return
-			_start_round()
-		else:
-			turn_started.emit(current_player_index, current_round)
-			_update_valid_moves()
+	if _try_check_end_conditions():
+		return
+	while current_player_index < players.size():
+		var next_player := get_current_player()
+		if next_player != null and not next_player.is_stuck:
+			break
+		current_player_index += 1
+	if _try_check_end_conditions():
+		return
+	turn_started.emit(current_player_index, current_round)
+	_update_valid_moves()
 
+func _try_check_end_conditions() -> bool:
+	if current_player_index < players.size():
+		return false
+	var move_result := WinChecker.check_move_limit(mrx_move_count)
+	if move_result["game_over"]:
+		_end_game(move_result["winner"], move_result["reason"])
+		return true
+	if WinChecker.check_all_detectives_stuck(players):
+		_end_game(GameConstants.PlayerRole.MRX, "所有侦探都被困住了，Mr. X 胜利!")
+		return true
+	_start_round()
+	return true
 func _end_game(winner: int, reason: String) -> void:
 	phase = GameConstants.GamePhase.GAME_OVER
 	game_over.emit(winner, reason)

@@ -29,7 +29,12 @@
       "Bash(sed -i 's/\\\\tvar candidates: Array = md.get_station_ids_at_position\\(local_pos\\)/\\\\tvar candidates: Array = md.get_station_ids_at_position\\(local_pos, tolerance\\)/' scripts/ui/game_board_controller.gd)",
       "Bash(xxd \"C:/Data/Godot/scotland-yard/scripts/ui/game_board_controller.gd\")",
       "Bash(python3 *)",
-      "Bash(npm config *)"
+      "Bash(npm config *)",
+      "Bash(xxd \"C:\\\\Data\\\\Godot\\\\scotland-yard\\\\data\\\\stations.json\")",
+      "Bash(sed -i '339d' \"C:\\\\Data\\\\Godot\\\\scotland-yard\\\\scripts\\\\ui\\\\game_board_controller.gd\")",
+      "Bash(sed -i 's/_map_renderer.create_token\\(i, p.station_id, p.color, label\\)/_map_renderer.create_token\\(i, p.station_id, p.color\\)/' \"C:\\\\Data\\\\Godot\\\\scotland-yard\\\\scripts\\\\ui\\\\game_board_controller.gd\")",
+      "Bash(sed -i '257d' \"C:\\\\Data\\\\Godot\\\\scotland-yard\\\\scripts\\\\ui\\\\main_menu_controller.gd\")",
+      "Bash(sed -i '/^\t\tvar is_current: bool = false$/d' \"C:\\\\Data\\\\Godot\\\\scotland-yard\\\\scripts\\\\ui\\\\main_menu_controller.gd\")"
     ]
   }
 }
