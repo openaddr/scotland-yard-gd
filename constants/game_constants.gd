@@ -69,3 +69,16 @@ const PLAYER_COLORS := [
 ]
 
 const PLAYER_NAMES := ["Mr. X", "侦探1", "侦探2", "侦探3", "侦探4", "侦探5"]
+
+const COLOR_PALETTE := [
+	{"name": "红色", "color": Color("#E53935")},
+	{"name": "蓝色", "color": Color("#2196F3")},
+	{"name": "橙色", "color": Color("#FF9800")},
+	{"name": "紫色", "color": Color("#9C27B0")},
+	{"name": "青色", "color": Color("#00BCD4")},
+	{"name": "绿色", "color": Color("#8BC34A")},
+	{"name": "粉色", "color": Color("#E91E63")},
+	{"name": "棕色", "color": Color("#795548")},
+	{"name": "金色", "color": Color("#FFD600")},
+	{"name": "白色", "color": Color("#ECEFF1")},
+]

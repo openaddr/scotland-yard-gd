@@ -12,8 +12,8 @@ func _ready() -> void:
 
 func _draw() -> void:
 	var sp: float = _md.get_viewport_scale() if _md else 1.0
-	var fs: int = int(clamp(9.0 * sp, 9.0, 18.0))
-	var outline: float = max(1.0, fs / 8.0)
+	var fs: int = int(clamp(7.0 * sp, 6.0, 12.0))
+	var outline: float = max(0.8, fs / 8.0)
 	var col: Color = Color.WHITE
 	var bg: Color = Color(0, 0, 0, 0.7)
 	var all_colors = {
@@ -41,7 +41,7 @@ func _draw() -> void:
 		var text: String = sid_str
 		var ts: Vector2 = _font.get_string_size(text, HORIZONTAL_ALIGNMENT_CENTER, -1, fs)
 		var cx: float = pos.x - ts.x / 2.0
-		var cy: float = pos.y - ts.y / 2.0 - 3.0 * sp
+		var cy: float = pos.y - ts.y / 2.0 + 1.0 * sp
 		for dx in [-1, 0, 1]:
 			for dy in [-1, 0, 1]:
 				if dx == 0 and dy == 0:

@@ -16,7 +16,7 @@ func _ready() -> void:
 
 	var md := Node.new()
 	md.name = "MapData"
-	md.set_script(load("res://autoload/map_data.gd"))
+	md.ccd  --resume "token-color-selection" set_script(load("res://autoload/map_data.gd"))
 	get_tree().root.add_child(md)
 	await get_tree().process_frame
 

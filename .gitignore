@@ -3,3 +3,9 @@
 /android/
 .idea
 .playwright-mcp
+
+# Build output
+build/
+
+# Runtime logs
+debug.log

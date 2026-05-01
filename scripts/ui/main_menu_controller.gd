@@ -2,6 +2,12 @@ extends Control
 
 var _selected_count: int = 3
 var _count_buttons: Dictionary = {}
+var _color_selections: Array = []
+var _color_btns: Array[Button] = []
+var _color_prompt_label: Label
+var _color_grid: GridContainer
+var _main_content: Control
+var _color_content: Control
 
 func _ready() -> void:
 	var bg := ColorRect.new()
@@ -9,6 +15,19 @@ func _ready() -> void:
 	bg.color = Color(0.1, 0.1, 0.15, 1)
 	add_child(bg)
 
+	_main_content = Control.new()
+	_main_content.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_main_content)
+
+	_color_content = Control.new()
+	_color_content.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_color_content.visible = false
+	add_child(_color_content)
+
+	_build_main_ui()
+	_build_color_ui()
+
+func _build_main_ui() -> void:
 	var vbox := VBoxContainer.new()
 	vbox.set_anchors_preset(Control.PRESET_CENTER)
 	vbox.offset_left = -200
@@ -16,7 +35,7 @@ func _ready() -> void:
 	vbox.offset_right = 200
 	vbox.offset_bottom = 200
 	vbox.add_theme_constant_override("separation", 20)
-	add_child(vbox)
+	_main_content.add_child(vbox)
 
 	var title := Label.new()
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -65,7 +84,7 @@ func _ready() -> void:
 	start_btn.custom_minimum_size = Vector2(200, 60)
 	start_btn.text = "开始游戏"
 	start_btn.add_theme_font_size_override("font_size", 24)
-	start_btn.pressed.connect(_start_game)
+	start_btn.pressed.connect(_enter_color_selection)
 	vbox.add_child(start_btn)
 
 	var rules_btn := Button.new()
@@ -95,6 +114,92 @@ func _ready() -> void:
 	rules.label_settings = ls_rules
 	vbox.add_child(rules)
 
+func _build_color_ui() -> void:
+	var vbox := VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_CENTER)
+	vbox.offset_left = -250
+	vbox.offset_top = -200
+	vbox.offset_right = 250
+	vbox.offset_bottom = 200
+	vbox.add_theme_constant_override("separation", 20)
+	_color_content.add_child(vbox)
+
+	var title := Label.new()
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.text = "选择颜色"
+	var ls_title := LabelSettings.new()
+	ls_title.font_size = 36
+	ls_title.font_color = Color("#E8C840")
+	title.label_settings = ls_title
+	vbox.add_child(title)
+
+	_color_prompt_label = Label.new()
+	_color_prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_color_prompt_label.text = ""
+	var ls_prompt := LabelSettings.new()
+	ls_prompt.font_size = 22
+	ls_prompt.font_color = Color.WHITE
+	_color_prompt_label.label_settings = ls_prompt
+	vbox.add_child(_color_prompt_label)
+
+	var summary_label := Label.new()
+	summary_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	summary_label.name = "SummaryLabel"
+	summary_label.text = ""
+	summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var ls_summary := LabelSettings.new()
+	ls_summary.font_size = 14
+	ls_summary.font_color = Color("#999999")
+	summary_label.label_settings = ls_summary
+	vbox.add_child(summary_label)
+
+	_color_grid = GridContainer.new()
+	_color_grid.columns = 5
+	_color_grid.add_theme_constant_override("h_separation", 10)
+	_color_grid.add_theme_constant_override("v_separation", 10)
+	_color_grid.add_theme_constant_override("h_size_flags", 4)
+	vbox.add_child(_color_grid)
+
+	for i in range(GameConstants.COLOR_PALETTE.size()):
+		var entry = GameConstants.COLOR_PALETTE[i]
+		var btn := Button.new()
+		btn.custom_minimum_size = Vector2(90, 70)
+		var c: Color = entry["color"]
+		btn.add_theme_color_override("font_color", (Color("#DDDDDD") if c.get_luminance() < 0.4 else Color("#333333")))
+		var style := StyleBoxFlat.new()
+		style.bg_color = c
+		style.set_corner_radius_all(8)
+		style.set_border_width_all(2)
+		style.border_color = Color.TRANSPARENT
+		for state in ["normal", "hover", "pressed", "focus"]:
+			btn.add_theme_stylebox_override(state, style.duplicate())
+		var label_text = entry["name"]
+		btn.text = label_text
+		btn.add_theme_font_size_override("font_size", 16)
+		btn.pressed.connect(_on_color_selected.bind(i))
+		_color_grid.add_child(btn)
+		_color_btns.append(btn)
+
+	var btn_box := HBoxContainer.new()
+	btn_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	btn_box.add_theme_constant_override("separation", 15)
+	vbox.add_child(btn_box)
+
+	var back_btn := Button.new()
+	back_btn.custom_minimum_size = Vector2(120, 45)
+	back_btn.text = "返回"
+	back_btn.add_theme_font_size_override("font_size", 18)
+	back_btn.pressed.connect(_exit_color_selection)
+	btn_box.add_child(back_btn)
+
+	var reset_btn := Button.new()
+	reset_btn.custom_minimum_size = Vector2(120, 45)
+	reset_btn.text = "重新选择"
+	reset_btn.add_theme_font_size_override("font_size", 18)
+	reset_btn.pressed.connect(_reset_color_selection)
+	reset_btn.name = "ResetBtn"
+	btn_box.add_child(reset_btn)
+
 func _select_count(count: int) -> void:
 	_selected_count = count
 	for c in _count_buttons:
@@ -122,8 +227,75 @@ func _select_count(count: int) -> void:
 					style.bg_color = Color("#4A4A5A")
 				btn.add_theme_stylebox_override(state, style)
 
-func _start_game() -> void:
-	get_node("/root/GameState").start_game(_selected_count)
+func _enter_color_selection() -> void:
+	_color_selections.clear()
+	_main_content.visible = false
+	_color_content.visible = true
+	_update_color_ui()
+
+func _exit_color_selection() -> void:
+	_color_content.visible = false
+	_main_content.visible = true
+
+func _reset_color_selection() -> void:
+	_color_selections.clear()
+	_update_color_ui()
+
+func _update_color_ui() -> void:
+	var current_player: int = _color_selections.size()
+	if current_player >= _selected_count:
+		_start_game_with_colors()
+		return
+	var player_label: String
+	if current_player == 0:
+		player_label = "Mr. X"
+	else:
+		player_label = "侦探 %d" % current_player
+	_color_prompt_label.text = "请 %s 选择颜色" % player_label
+	for i in range(_color_btns.size()):
+		var btn: Button = _color_btns[i]
+		var is_taken: bool = _color_selections.has(i)
+		btn.disabled = is_taken
+		if is_taken:
+			for state in ["normal", "hover", "pressed", "focus"]:
+				var s: StyleBoxFlat = btn.get_theme_stylebox(state).duplicate()
+				s.bg_color = Color(0.3, 0.3, 0.3, 0.5)
+				s.border_color = Color.TRANSPARENT
+				btn.add_theme_stylebox_override(state, s)
+			btn.add_theme_color_override("font_color", Color("#666666"))
+		else:
+			var entry = GameConstants.COLOR_PALETTE[i]
+			var c: Color = entry["color"]
+			for state in ["normal", "hover", "pressed", "focus"]:
+				var s := StyleBoxFlat.new()
+				s.bg_color = c
+				s.set_corner_radius_all(8)
+				s.set_border_width_all(2)
+				s.border_color = Color.TRANSPARENT
+				if state == "hover":
+					s.border_color = Color.WHITE
+				elif state == "pressed":
+					s.bg_color = c.darkened(0.2)
+				btn.add_theme_stylebox_override(state, s)
+			btn.add_theme_color_override("font_color", (Color("#DDDDDD") if c.get_luminance() < 0.4 else Color("#333333")))
+	var summary_label = _color_content.find_child("SummaryLabel", true, false)
+	if summary_label:
+		var parts: PackedStringArray = []
+		for idx in _color_selections:
+			parts.append(GameConstants.COLOR_PALETTE[idx]["name"])
+		summary_label.text = "已选: " + " ".join(parts) if parts.size() > 0 else ""
+	var reset_btn = _color_content.find_child("ResetBtn", true, false)
+	if reset_btn:
+		reset_btn.visible = _color_selections.size() > 0
+
+func _on_color_selected(index: int) -> void:
+	if _color_selections.has(index):
+		return
+	_color_selections.append(index)
+	_update_color_ui()
+
+func _start_game_with_colors() -> void:
+	get_node("/root/GameState").start_game(_selected_count, _color_selections)
 	get_tree().change_scene_to_file("res://scenes/game.tscn")
 
 func _build_rules_popup() -> void:
